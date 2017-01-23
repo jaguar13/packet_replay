@@ -354,7 +354,7 @@ void CMainFrame::OnPlay()
 		return;
 	}
 	else
-		m_wndOutput.DebugText(CString(_T("Successfully configured interfaces:")));
+		m_wndOutput.DebugText(CString(_T("Successfully configuring interfaces:")));
 
 	if(src == dst)
 		m_wndOutput.DebugText(CString(_T("Warnning!! Source and Destination interface are the same.")));
