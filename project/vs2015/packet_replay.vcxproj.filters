@@ -86,9 +86,16 @@
     <ClInclude Include="..\..\src\cmd_actions\pcap_devs_action_getif_by_number_t.hpp">
       <Filter>Header Files\cmd_actions</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\protocols\layer4\flows.hpp">
+      <Filter>Header Files\protocols\layer4</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\protocols\layer4\udp.hpp">
+      <Filter>Header Files\protocols\layer4</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="todo.txt" />
     <Text Include="protocols.txt" />
+    <Text Include="commands.txt" />
   </ItemGroup>
 </Project>

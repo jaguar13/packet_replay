@@ -91,11 +91,14 @@
     <ClInclude Include="..\..\src\protocols\layer3\common.hpp" />
     <ClInclude Include="..\..\src\protocols\layer3\ipv4.hpp" />
     <ClInclude Include="..\..\src\protocols\layer4\common.hpp" />
+    <ClInclude Include="..\..\src\protocols\layer4\flows.hpp" />
     <ClInclude Include="..\..\src\protocols\layer4\tcp.hpp" />
+    <ClInclude Include="..\..\src\protocols\layer4\udp.hpp" />
     <ClInclude Include="..\..\src\traffic_replay.hpp" />
     <ClInclude Include="..\..\src\windows\windows.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <Text Include="commands.txt" />
     <Text Include="protocols.txt" />
     <Text Include="todo.txt" />
   </ItemGroup>

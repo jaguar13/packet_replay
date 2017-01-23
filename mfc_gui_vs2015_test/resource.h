@@ -34,14 +34,17 @@
 #define IDS_FIND_TAB                    302
 #define IDS_EDIT_MENU                   306
 #define IDR_MAINFRAME_256               310
+#define IDR_TOOLBAR1                    327
 #define ID_FILE_REPLAY                  32773
+#define ID_BUTTON32778                  32778
+#define ID_REPLAY_PCAP                  32779
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        312
-#define _APS_NEXT_COMMAND_VALUE         32774
+#define _APS_NEXT_RESOURCE_VALUE        329
+#define _APS_NEXT_COMMAND_VALUE         32780
 #define _APS_NEXT_CONTROL_VALUE         1000
 #define _APS_NEXT_SYMED_VALUE           310
 #endif

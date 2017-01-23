@@ -34,7 +34,12 @@ namespace replay {
 			return m_rsplit.init(src, dst);
 		}
 
-		bool do_action(const char* pcap_file)
+		bool init(const char* si, const char* di, const char* sip, const char* dip)
+		{
+			return m_rsplit.init(si, di, sip, dip);
+		}
+
+		bool do_action(const char* pcap_file, bool clean_stats = true)
 		{
 			pcap_count++;
 			
@@ -52,42 +57,59 @@ namespace replay {
 
 			if (m_rsplit.has_bad_ptks())
 			{
+				if (m_rsplit.get_l2_non_supported_packet_count() > 0)
+					l2_non_supported_replays_pcaps.push_back(pcap_file);
+
+				if (m_rsplit.get_failed_packet_count() > 0)
+					failed_replays_pcaps.push_back(pcap_file);
+
 				m_failed_packet_count += m_rsplit.get_failed_packet_count();
-				m_l2_non_supported_packet_count += m_rsplit.get_l2_non_supported_packet_count();				
-				failed_replays_pcaps.push_back(pcap_file);
+				m_l2_non_supported_packet_count += m_rsplit.get_l2_non_supported_packet_count();
 			}
 
-			m_rsplit.clean_stats();
+			if(clean_stats)
+				m_rsplit.clean_stats();
 
 			return true;
 		}		
 
-		void dump_stats() 
+		bool errors() {
+			return m_failed_packet_count > 0 || m_l2_non_supported_packet_count > 0 || corrupted_pcaps.size() > 0;
+		}
+
+		void dump_stats(std::ostream& strm)
 		{
-			std::cout << "Pcap stats: " << std::endl;
-			std::cout << "  Total pcaps:               " << pcap_count << std::endl;
-			std::cout << "  Corrupted pcaps:           " << corrupted_pcaps.size() << std::endl;
-			std::cout << "  Total packets:             " << m_packet_count << std::endl;
-			std::cout << "  Replayed packets:          " << m_replayed_packet_count << std::endl;
-			std::cout << "  Pcaps with failed packets: " << failed_replays_pcaps.size() << std::endl;
-			std::cout << "  L2 non-suported packets:   " << m_l2_non_supported_packet_count << std::endl;
-			std::cout << "  Failed packet count:       " << m_failed_packet_count << std::endl;		
+			strm << "Pcap stats: " << std::endl;
+			strm << "  Total pcaps:               " << pcap_count << std::endl;
+			strm << "  Corrupted pcaps:           " << corrupted_pcaps.size() << std::endl;
+			strm << "  Total packets:             " << m_packet_count << std::endl;
+			strm << "  Replayed packets:          " << m_replayed_packet_count << std::endl;
+			strm << "  Pcaps with failed packets: " << failed_replays_pcaps.size() << std::endl;
+			strm << "  L2 non-suported packets:   " << m_l2_non_supported_packet_count << std::endl;
+			strm << "  Failed packet count:       " << m_failed_packet_count << std::endl;		
 
 			if (corrupted_pcaps.size() > 0)
 			{
-				std::cout << "  Corrupted pcaps list :" << std::endl;
+				strm << "  Corrupted pcaps list :" << std::endl;
 				for (size_t i = 0; i < corrupted_pcaps.size(); i++)
-					std::cout << "   " << corrupted_pcaps[i] << std::endl;
+					strm << "   " << corrupted_pcaps[i] << std::endl;
+			}
+
+			if (l2_non_supported_replays_pcaps.size() > 0)
+			{
+				strm << "  Pcaps with L2 layer non-suppored :" << std::endl;
+				for (size_t i = 0; i < l2_non_supported_replays_pcaps.size(); i++)
+					strm << "    " << l2_non_supported_replays_pcaps[i] << std::endl;
 			}
 			
 			if (failed_replays_pcaps.size() > 0)
 			{
-				std::cout << "  Pcaps with failed packets list :" << std::endl;
+				strm << "  Pcaps with failed packets list :" << std::endl;
 				for (size_t i = 0; i < failed_replays_pcaps.size(); i++)
-					std::cout << "    " << failed_replays_pcaps[i] << std::endl;
+					strm << "    " << failed_replays_pcaps[i] << std::endl;
 			}
 		}
-
+		
 		pcap_layer2_split_replay_t m_rsplit;
 		uint32_t pcap_count;
 		std::string m_src_ifname;
@@ -100,5 +122,6 @@ namespace replay {
 		uint64_t m_l2_non_supported_packet_count;
 		uint64_t m_replayed_packet_count;
 		std::vector<std::string> failed_replays_pcaps;
+		std::vector<std::string> l2_non_supported_replays_pcaps;
 	};	
 }

@@ -164,4 +164,10 @@ void COutputList::OnViewOutput()
 	}
 }
 
+void COutputWnd::DebugText(CString & text)
+{
+	m_wndOutputDebug.AddString(text);
+	m_wndOutputDebug.SetCurSel(m_wndOutputDebug.GetCount() - 1);
+}
+
 

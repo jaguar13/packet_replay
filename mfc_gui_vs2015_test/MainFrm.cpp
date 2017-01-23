@@ -8,6 +8,7 @@
 #include "MainFrm.h"
 
 #include "traffic_replay.hpp"
+#include <cmd_actions/offline_pcaps_action_replay_folder_t.hpp>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -27,6 +28,7 @@ BEGIN_MESSAGE_MAP(CMainFrame, CFrameWndEx)
 	ON_COMMAND(ID_VIEW_CUSTOMIZE, &CMainFrame::OnViewCustomize)
 	ON_REGISTERED_MESSAGE(AFX_WM_CREATETOOLBAR, &CMainFrame::OnToolbarCreateNew)
 	ON_COMMAND(ID_FILE_REPLAY, &CMainFrame::OnPlay)
+	ON_COMMAND(ID_REPLAY_PCAP, &CMainFrame::OnPlay)
 END_MESSAGE_MAP()
 
 static UINT indicators[] =
@@ -79,8 +81,17 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 		return -1;
 	}
 
-	if (!m_wndToolBar.CreateEx(this, TBSTYLE_FLAT, WS_CHILD | WS_VISIBLE | CBRS_TOP | CBRS_GRIPPER | CBRS_TOOLTIPS | CBRS_FLYBY | CBRS_SIZE_DYNAMIC) ||
-		!m_wndToolBar.LoadToolBar(theApp.m_bHiColorIcons ? IDR_MAINFRAME_256 : IDR_MAINFRAME))
+	//if (!m_wndToolBar.CreateEx(this, TBSTYLE_FLAT, 
+	//	WS_CHILD | WS_VISIBLE | CBRS_TOP | CBRS_GRIPPER | CBRS_TOOLTIPS | CBRS_FLYBY | CBRS_SIZE_DYNAMIC) 
+	//	|| !m_wndToolBar.LoadToolBar(theApp.m_bHiColorIcons ? IDR_MAINFRAME_256 : IDR_MAINFRAME))
+	//{
+	//	TRACE0("Failed to create toolbar\n");
+	//	return -1;      // fail to create
+	//}
+
+	if (!m_wndToolBar.CreateEx(this, TBSTYLE_FLAT,
+		WS_CHILD | WS_VISIBLE | CBRS_TOP | CBRS_GRIPPER | CBRS_TOOLTIPS | CBRS_FLYBY | CBRS_SIZE_DYNAMIC)
+		|| !m_wndToolBar.LoadToolBar(IDR_TOOLBAR1))
 	{
 		TRACE0("Failed to create toolbar\n");
 		return -1;      // fail to create
@@ -90,11 +101,11 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	bNameValid = strToolBarName.LoadString(IDS_TOOLBAR_STANDARD);
 	ASSERT(bNameValid);
 	m_wndToolBar.SetWindowText(strToolBarName);
-
-	CString strCustomize;
+	
+	/*CString strCustomize;
 	bNameValid = strCustomize.LoadString(IDS_TOOLBAR_CUSTOMIZE);
 	ASSERT(bNameValid);
-	m_wndToolBar.EnableCustomizeButton(TRUE, ID_VIEW_CUSTOMIZE, strCustomize);
+	m_wndToolBar.EnableCustomizeButton(TRUE, ID_VIEW_CUSTOMIZE, strCustomize);*/
 
 	// Allow user-defined toolbars operations:
 	InitUserToolbars(NULL, uiFirstUserToolBarId, uiLastUserToolBarId);
@@ -133,20 +144,20 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 
 
 	// Enable toolbar and docking window menu replacement
-	EnablePaneMenu(TRUE, ID_VIEW_CUSTOMIZE, strCustomize, ID_VIEW_TOOLBAR);
+	//EnablePaneMenu(TRUE, ID_VIEW_CUSTOMIZE, strCustomize, ID_VIEW_TOOLBAR);
 
 	// enable quick (Alt+drag) toolbar customization
 	CMFCToolBar::EnableQuickCustomization();
 
-	if (CMFCToolBar::GetUserImages() == NULL)
-	{
-		// load user-defined toolbar images
-		if (m_UserImages.Load(_T(".\\UserImages.bmp")))
-		{
-			m_UserImages.SetImageSize(CSize(16, 16), FALSE);
-			CMFCToolBar::SetUserImages(&m_UserImages);
-		}
-	}
+	//if (CMFCToolBar::GetUserImages() == NULL)
+	//{
+	//	// load user-defined toolbar images
+	//	if (m_UserImages.Load(_T(".\\UserImages.bmp")))
+	//	{
+	//		m_UserImages.SetImageSize(CSize(16, 16), FALSE);
+	//		CMFCToolBar::SetUserImages(&m_UserImages);
+	//	}
+	//}
 
 	// enable menu personalization (most-recently used commands)
 	// TODO: define your own basic commands, ensuring that each pulldown menu has at least one basic command.
@@ -157,11 +168,14 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	lstBasicCommands.AddTail(ID_EDIT_PASTE);
 	lstBasicCommands.AddTail(ID_EDIT_UNDO);
 	lstBasicCommands.AddTail(ID_APP_ABOUT);
+
 	lstBasicCommands.AddTail(ID_VIEW_STATUS_BAR);
 	lstBasicCommands.AddTail(ID_VIEW_TOOLBAR);
 	lstBasicCommands.AddTail(ID_FILE_REPLAY);
 
 	CMFCToolBar::SetBasicCommands(lstBasicCommands);
+	
+	//m_wndToolBar.RemoveAllButtons();
 
 	return 0;
 }
@@ -185,7 +199,8 @@ BOOL CMainFrame::CreateDockingWindows()
 	CString strOutputWnd;
 	bNameValid = strOutputWnd.LoadString(IDS_OUTPUT_WND);
 	ASSERT(bNameValid);
-	if (!m_wndOutput.Create(strOutputWnd, this, CRect(0, 0, 100, 100), TRUE, ID_VIEW_OUTPUTWND, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | CBRS_BOTTOM | CBRS_FLOAT_MULTI))
+	if (!m_wndOutput.Create(strOutputWnd, this, CRect(0, 0, 100, 100), 
+		TRUE, ID_VIEW_OUTPUTWND, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | CBRS_BOTTOM | CBRS_FLOAT_MULTI))
 	{
 		TRACE0("Failed to create Output window\n");
 		return FALSE; // failed to create
@@ -195,7 +210,8 @@ BOOL CMainFrame::CreateDockingWindows()
 	CString strPropertiesWnd;
 	bNameValid = strPropertiesWnd.LoadString(IDS_PROPERTIES_WND);
 	ASSERT(bNameValid);
-	if (!m_wndProperties.Create(strPropertiesWnd, this, CRect(0, 0, 200, 200), TRUE, ID_VIEW_PROPERTIESWND, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | CBRS_RIGHT | CBRS_FLOAT_MULTI))
+	if (!m_wndProperties.Create(strPropertiesWnd, this, CRect(0, 0, 200, 200), 
+		TRUE, ID_VIEW_PROPERTIESWND, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | CBRS_RIGHT | CBRS_FLOAT_MULTI))
 	{
 		TRACE0("Failed to create Properties window\n");
 		return FALSE; // failed to create
@@ -207,10 +223,14 @@ BOOL CMainFrame::CreateDockingWindows()
 
 void CMainFrame::SetDockingWindowIcons(BOOL bHiColorIcons)
 {
-	HICON hOutputBarIcon = (HICON) ::LoadImage(::AfxGetResourceHandle(), MAKEINTRESOURCE(bHiColorIcons ? IDI_OUTPUT_WND_HC : IDI_OUTPUT_WND), IMAGE_ICON, ::GetSystemMetrics(SM_CXSMICON), ::GetSystemMetrics(SM_CYSMICON), 0);
+	HICON hOutputBarIcon = (HICON) ::LoadImage(::AfxGetResourceHandle(), 
+		MAKEINTRESOURCE(bHiColorIcons ? IDI_OUTPUT_WND_HC : IDI_OUTPUT_WND), 
+		IMAGE_ICON, ::GetSystemMetrics(SM_CXSMICON), ::GetSystemMetrics(SM_CYSMICON), 0);
 	m_wndOutput.SetIcon(hOutputBarIcon, FALSE);
 
-	HICON hPropertiesBarIcon = (HICON) ::LoadImage(::AfxGetResourceHandle(), MAKEINTRESOURCE(bHiColorIcons ? IDI_PROPERTIES_WND_HC : IDI_PROPERTIES_WND), IMAGE_ICON, ::GetSystemMetrics(SM_CXSMICON), ::GetSystemMetrics(SM_CYSMICON), 0);
+	HICON hPropertiesBarIcon = (HICON) ::LoadImage(::AfxGetResourceHandle(), 
+		MAKEINTRESOURCE(bHiColorIcons ? IDI_PROPERTIES_WND_HC : IDI_PROPERTIES_WND), 
+		IMAGE_ICON, ::GetSystemMetrics(SM_CXSMICON), ::GetSystemMetrics(SM_CYSMICON), 0);
 	m_wndProperties.SetIcon(hPropertiesBarIcon, FALSE);
 
 }
@@ -305,37 +325,122 @@ BOOL CMainFrame::LoadFrame(UINT nIDResource, DWORD dwDefaultStyle, CWnd* pParent
 
 void CMainFrame::OnPlay()
 {
+	m_wndOutput.DebugText(CString(_T("## Replaying ....")));
 	CStringArray files;
 	m_wndView.GetSelectedFiles(files);
+
+	if (files.GetCount() == 0)
+	{
+		m_wndOutput.DebugText(CString(_T("No pcaps selected.")));
+		return;
+	}
+
+	uint64_t failed_packet_count = 0;
+	uint64_t l2_non_supported_packet_count = 0;
+	uint64_t replayed_packet_count = 0;
+	uint64_t packet_count = 0;
+	std::vector<std::string> corrupted_pcaps;
+	std::vector<std::string> failed_replays_pcaps;
+	std::vector<std::string> l2_non_supported_replays_pcaps;
+
+	std::string src = m_wndProperties.GetSourceIf();
+	std::string dst = m_wndProperties.GetDestinationIf();
+
+	replay::pcap_layer2_split_replay_t replay;
+
+	m_wndOutput.DebugText(CString(_T("Configuring interfaces...")));
+	if (!replay.init(src.c_str(), dst.c_str())) {
+		m_wndOutput.DebugText(CString(_T("Error configuring interfaces:")));
+		return;
+	}
+	else
+		m_wndOutput.DebugText(CString(_T("Successfully configured interfaces:")));
+
+	if(src == dst)
+		m_wndOutput.DebugText(CString(_T("Warnning!! Source and Destination interface are the same.")));
+
+	m_wndOutput.DebugText(CString(_T("Source:      ")) + CString(src.c_str()));
+	m_wndOutput.DebugText(CString(_T("Destination: ")) + CString(dst.c_str()));
 
 	for (int n = 0; n < files.GetCount(); n++)
 	{
 		CString filePath = files.GetAt(n);
-		m_wndOutput.DebugText(CString(_T("Replaying the file: ")) + filePath);
-
 		std::string filePathA = CT2A(filePath);
+		m_wndOutput.DebugText(CString(_T("Replaying pcap: ")) + filePath);
 
-		m_wndOutput.DebugText(CString(_T("Reading pcap...")));
 		replay::offline_pcap_t pcap;
-		if(!pcap.open(pcap, filePathA.c_str()))
+		if (!pcap.open(pcap, filePathA.c_str()))
 		{
-			m_wndOutput.DebugText(CString(_T("Failed reading pcap.")));
-			return;
+			corrupted_pcaps.push_back(filePathA.c_str());
+			m_wndOutput.DebugText(CString(_T("Error corrupted pcap: ")) + filePath);
+			continue;
+		}		
+
+		replay::pcap_layer2_split_replay_t::play_back(replay, pcap);
+
+		replayed_packet_count += replay.get_replayed_packet_count();
+		packet_count += replay.get_packet_count();
+
+		if (replay.has_bad_ptks())
+		{
+			if (replay.get_l2_non_supported_packet_count() > 0)
+				l2_non_supported_replays_pcaps.push_back(filePathA.c_str());
+
+			if (replay.get_failed_packet_count() > 0)
+				failed_replays_pcaps.push_back(filePathA.c_str());
+
+			failed_packet_count += replay.get_failed_packet_count();
+			l2_non_supported_packet_count += replay.get_l2_non_supported_packet_count();
 		}
 
-		m_wndOutput.DebugText(CString(_T("Successfull pcap reading...")));
-
-		std::string src = m_wndProperties.GetSourceIf();
-		std::string dst = m_wndProperties.GetDestinationIf();
-
-		m_wndOutput.DebugText(CString(_T("Replaying:")));
-		m_wndOutput.DebugText(CString(_T("Source:      ")) + CString(src.c_str()));
-		m_wndOutput.DebugText(CString(_T("Destination: ")) + CString(dst.c_str()));
-
-		replay::pcap_layer2_split_replay_t split;
-		if(split.init(src.c_str(), dst.c_str())){
-			replay::pcap_layer2_split_replay_t::play_back(split, pcap);
-		}
+		replay.clean_stats();
 	}
+
+	CString stat;
+	m_wndOutput.DebugText(CString(_T("Replay stats: ")));
+
+	stat.Format(_T("  Total pcaps: %d"), files.GetCount());
+	m_wndOutput.DebugText(stat);
+	stat.Format(_T("  Corrupted pcaps: %d"), corrupted_pcaps.size());
+	m_wndOutput.DebugText(stat);
+	stat.Format(_T("  Total packets: %d"), packet_count);
+	m_wndOutput.DebugText(stat);
+	stat.Format(_T("  Replayed packets: %d"), replayed_packet_count);
+	m_wndOutput.DebugText(stat);
+	stat.Format(_T("  Pcaps with failed packets: %d"), failed_replays_pcaps.size());
+	m_wndOutput.DebugText(stat);
+	stat.Format(_T("  L2 non-suported packets: %d"), l2_non_supported_packet_count);
+	m_wndOutput.DebugText(stat);
+	stat.Format(_T("  Failed packet count: %d"), failed_packet_count);
+	m_wndOutput.DebugText(stat);
+	
+	if (corrupted_pcaps.size() > 0)
+	{
+		m_wndOutput.DebugText(CString(_T("  Corrupted pcaps list :")));
+		for (size_t i = 0; i < corrupted_pcaps.size(); i++)
+			m_wndOutput.DebugText(CString(_T("   ")) + CString(corrupted_pcaps[i].c_str()));
+	}
+
+	if (l2_non_supported_replays_pcaps.size() > 0)
+	{
+		m_wndOutput.DebugText(CString(_T("  Pcaps with L2 layer non-suppored :")));
+		for (size_t i = 0; i < l2_non_supported_replays_pcaps.size(); i++)
+			m_wndOutput.DebugText(CString(_T("   ")) + CString(l2_non_supported_replays_pcaps[i].c_str()));
+	}
+
+	if (failed_replays_pcaps.size() > 0)
+	{
+		m_wndOutput.DebugText(CString(_T("  Pcaps with failed packets list :")));
+		for (size_t i = 0; i < failed_replays_pcaps.size(); i++)
+			m_wndOutput.DebugText(CString(_T("   ")) + CString(failed_replays_pcaps[i].c_str()));
+	}
+
+	if (corrupted_pcaps.size() > 0 
+		|| failed_replays_pcaps.size() > 0 
+		|| l2_non_supported_replays_pcaps.size() > 0)
+		m_wndOutput.DebugText(CString(_T("Error replaying some pcaps..")));
+	else
+		m_wndOutput.DebugText(CString(_T("Successfully replay.")));
+
 }
 

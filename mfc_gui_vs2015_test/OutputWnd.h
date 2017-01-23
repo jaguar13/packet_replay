@@ -30,7 +30,7 @@ public:
 	COutputWnd();
 
 public:
-	void DebugText(CString& text){m_wndOutputDebug.AddString(text);}
+	void DebugText(CString& text);	
 
 // Attributes
 protected:

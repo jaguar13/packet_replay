@@ -27,10 +27,13 @@ void help()
 	std::cout << "    -p pcap_path -sip source_ip -dip destination_ip" << std::endl;
 	std::cout << "         replay a pcap from source IP to destination IP. Map from IP to interface will be done automatically" << std::endl;
 	std::cout << std::endl;
-	std::cout << "    -r pcap_folder_path -sip source_ip -dip destination_ip" << std::endl;
+	std::cout << "    -r pcap_folder_path|pcap_file_path -sip source_ip -dip destination_ip" << std::endl;
 	std::cout << "         replay a pcaps in folder from source IP to destination IP. Map from IP to interface will be done automatically" << std::endl;
 	std::cout << std::endl;
-	std::cout << "    -r pcap_folder_path -s source_interface_name -d destination_interface_name" << std::endl;
+	std::cout << "    -r pcap_folder_path|pcap_file_path -si source_interface_name -di destination_interface_name -sip source_ip -dip destination_ip" << std::endl;
+	std::cout << "         replay a pcaps in folder from any source IP to any destination IP." << std::endl;
+	std::cout << std::endl;
+	std::cout << "    -r pcap_folder_path|pcap_file_path -s source_interface_name -d destination_interface_name" << std::endl;
 	std::cout << "         replay a pcaps in folder pcap_folder_path from source to destination selected interface" << std::endl;
 
 	std::cout << std::endl;
@@ -131,11 +134,11 @@ void traffic_iq_replay(const char* src_if_n, const char* dst_if_n,
 
 int main(int argc, char* argv[])
 {
-	if(argc < 2)
+	if (argc < 2)
 	{
 		help();
 		return 0;
-	}	
+	}
 
 	if (argc == 2) {
 		if (std::string(argv[1]) == "-l")
@@ -148,8 +151,8 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	if(argc == 3){
-		if(std::string(argv[1]) == "-p")
+	if (argc == 3) {
+		if (std::string(argv[1]) == "-p")
 		{
 			offline_pcap_t pcap;
 			pcap.open(pcap, argv[2]);
@@ -169,9 +172,9 @@ int main(int argc, char* argv[])
 			return 0;
 		}
 	}
-	
-	if(argc == 5){
-		if(std::string(argv[1]) == "-p" && 
+
+	if (argc == 5) {
+		if (std::string(argv[1]) == "-p" &&
 			std::string(argv[3]) == "-i")
 		{
 			offline_pcap_t pcap;
@@ -184,10 +187,10 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	if(argc == 7)
+	if (argc == 7)
 	{
-		if(std::string(argv[1]) == "-p" && 
-			std::string(argv[3]) == "-s" && 
+		if (std::string(argv[1]) == "-p" &&
+			std::string(argv[3]) == "-s" &&
 			std::string(argv[5]) == "-d")
 		{
 			pcap_stats(argv[2]);
@@ -195,11 +198,11 @@ int main(int argc, char* argv[])
 			return 0;
 		}
 		else if (std::string(argv[1]) == "-r" &&
-			     std::string(argv[3]) == "-s" &&
-			     std::string(argv[5]) == "-d")
+				 std::string(argv[3]) == "-s" &&
+				 std::string(argv[5]) == "-d")
 		{
 			offline_pcaps_action_replay_t stats;
-			if(!stats.init(argv[4], argv[6], false))
+			if (!stats.init(argv[4], argv[6], false))
 			{
 				std::cout << "Failed configuring interfaces." << std::endl;
 				return 0;
@@ -207,7 +210,7 @@ int main(int argc, char* argv[])
 
 			std::cout << "Replaying folder: " << argv[2] << std::endl;
 			windows::fs::dir_files(argv[2], stats);
-			stats.dump_stats();
+			stats.dump_stats(std::cout);
 			return 0;
 		}
 		else if (std::string(argv[1]) == "-r" &&
@@ -223,7 +226,7 @@ int main(int argc, char* argv[])
 
 			std::cout << "Replaying folder: " << argv[2] << std::endl;
 			windows::fs::dir_files(argv[2], stats);
-			stats.dump_stats();
+			stats.dump_stats(std::cout);
 			return 0;
 		}
 		else if (std::string(argv[1]) == "-p" &&
@@ -236,9 +239,39 @@ int main(int argc, char* argv[])
 		}
 	}
 
+	if (argc == 11) {
+		if (std::string(argv[1]) == "-r" &&
+			std::string(argv[3]) == "-si" &&
+			std::string(argv[5]) == "-di" &&
+			std::string(argv[7]) == "-sip" &&
+			std::string(argv[9]) == "-dip")
+		{
+			try
+			{
+				offline_pcaps_action_replay_t stats;
+				if (!stats.init(argv[4], argv[6], argv[8], argv[10])) {
+					std::cout << "Failed configuring interfaces or IP formats are incorrect." << std::endl;
+					return 0;
+				}
+
+				std::cout << "Replaying folder: " << argv[2] << std::endl;
+				windows::fs::dir_files(argv[2], stats);
+				stats.dump_stats(std::cout);
+				return 0;
+			}
+			catch (const std::exception& ex)
+			{
+				std::cout << "error replaying. error: " << ex.what() << std::endl;
+			}
+			catch (...)
+			{
+				std::cout << "error replaying. " << std::endl;
+			}
+		}
+	}
+
 	//TrafficIQ fake options.
-	if (argc == 15)
-	{
+	if (argc == 15) {
 		//-ia 2 -ea 3 -tfile pcap_file.pcap -iport * -eport 0 -retry 5 -path E:/HPD
 		if (std::string(argv[1]) == "-ia" &&
 			std::string(argv[3]) == "-ea" &&
@@ -253,6 +286,6 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	help();	
-	return 0;
+	help();
+	return 0; 
 }

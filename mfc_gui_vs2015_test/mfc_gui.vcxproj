@@ -14,6 +14,7 @@
     <ProjectGuid>{4F1C2A0E-3893-4117-91A2-40081D01B3C6}</ProjectGuid>
     <RootNamespace>mfc_gui</RootNamespace>
     <Keyword>MFCProj</Keyword>
+    <ProjectName>replay</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
@@ -98,6 +99,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <AdditionalIncludeDirectories>..\src;..\extlibs\libs\winpcap\4.1.2\include;</AdditionalIncludeDirectories>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -110,6 +112,8 @@
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <TargetMachine>MachineX86</TargetMachine>
+      <AdditionalLibraryDirectories>..\extlibs\libs\winpcap\4.1.2\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>wpcap.lib;Packet.lib;Ws2_32.lib;Iphlpapi.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -136,15 +140,19 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="res\icon1.ico" />
+    <Image Include="res\main.ico" />
     <Image Include="res\mfc_gui.ico" />
     <Image Include="res\output_wnd.ico" />
     <Image Include="res\output_wnd_hc.ico" />
     <Image Include="res\pay.png" />
+    <Image Include="res\play.bmp" />
     <Image Include="res\properties.bmp" />
     <Image Include="res\properties_hc.bmp" />
     <Image Include="res\properties_wnd.ico" />
     <Image Include="res\properties_wnd_hc.ico" />
     <Image Include="res\Toolbar.bmp" />
+    <Image Include="res\toolbar1.bmp" />
     <Image Include="res\Toolbar256.bmp" />
     <Image Include="UserImages.bmp" />
   </ItemGroup>

@@ -27,6 +27,8 @@ TODO:
 #include <protocols/layer2/ethernet2.hpp>
 #include <protocols/layer3/ipv4.hpp>
 #include <protocols/layer3/common.hpp>
+#include <protocols/layer4/tcp.hpp>
+#include <protocols/layer4/udp.hpp>
 #include <windows/windows.hpp>
 
 namespace replay {
@@ -389,8 +391,58 @@ namespace replay {
 			return pcap_devs_t::get_first_ip_by_ifname(m_dst_if_ip, dst_ifname);
 		}
 
-		//send packets action.
-		//return false if stop any further action by the caller.
+		bool init(const char* src_ifname, 
+			const char* dst_ifname, 
+			const char* src_ip, 
+			const char* dst_ip, 
+			int snaplen = 9999, 
+			bool promisc = true, 
+			int to_ms = 5)
+		{
+			m_src_if = 0;
+			m_dst_if = 0;
+			m_pkt_count = 0;
+			m_failed_ptk_count = 0;
+			m_l2_non_sp_ptk = 0;
+
+			if (!open_if(src_ifname, &m_src_if, snaplen, promisc, to_ms))
+				return false;
+
+			if (!open_if(dst_ifname, &m_dst_if, snaplen, promisc, to_ms))
+				return false;
+
+			if (!windows::netif::get_network_adapter(src_ifname, m_src_if_mac))
+				return false;
+
+			if (!windows::netif::get_network_adapter(dst_ifname, m_dst_if_mac))
+				return false;
+
+			m_src_if_ip = inet_addr(src_ip);
+			if (m_src_if_ip == INADDR_NONE)
+				return false;
+			
+			m_dst_if_ip = inet_addr(dst_ip);
+			
+			return (m_dst_if_ip != INADDR_NONE);
+		}
+
+		/*
+			send packets action.
+			return false if stop any further action by the caller.
+			
+			note:
+			 we are doing the best effort to replay the pcap.because of that some fixes to the packet are
+			 done. example of fixes:
+				- packets can have Ethernet padding bytes at the end. pcap lib will fail to replay them if
+				  the total size is greater than the mtu. Here we are calculating the "util" pcayload to replay.
+				
+				- somes time IP packet length is greater than pcap packet size. this happens when:
+				  "Packet size limited during capture"
+
+				- fix pcap IP packet length: some times "packet_length" is 0 becuase "TCP segmentation offload". 
+				  We try to fix it here acording to packet data size.
+		*/
+		
 		bool do_action(pcap_pkthdr& pk_header, const u_char *data, layer2::types_t::enums& data_link_type)
 		{
 			if(data == 0)
@@ -405,9 +457,24 @@ namespace replay {
 				if(eth_header->get_payload_type() != layer3::types_t::ipv4)
 					return false;
 
-			    layer3::ipv4::ethernet_ipv4_headers_t* eth_ip_header = 
-					layer3::ipv4::ethernet_ipv4_headers_t::get_header(data);
-				
+			    layer3::ipv4::ethernet_ipv4_header_t* eth_ip_header = 
+					layer3::ipv4::ethernet_ipv4_header_t::get_header(data);
+
+				//fix pcap IP packet length.
+				//some times "packet_length" is 0 becuase "TCP segmentation offload". We try to fix it here acording to
+				//packet data size.
+				if(eth_ip_header->ip_header.packet_length == 0)
+					eth_ip_header->ip_header.packet_length = pk_header.caplen - eth_ip_header->eth_header.length;
+
+				//somes time IP packet length is greater than pcap packet size.
+				//this happens when "Packet size limited during capture"
+				if (eth_ip_header->ip_header.packet_length > pk_header.caplen - eth_ip_header->eth_header.length)
+					eth_ip_header->ip_header.packet_length = pk_header.caplen - eth_ip_header->eth_header.length;
+
+				//pcaps can have Ethernet padding bytes at the end. pcap lib will fail to replay them if
+				//the total size is greater than the mtu. Here we are calculating the "util" pcayload to replay.
+				uint16_t full_packet_lg = eth_ip_header->eth_header.length + eth_ip_header->ip_header.packet_length;
+
 				/*  
 					Layer 2 split algorithm.
 					1- if src is in src_list send packet to src interface.
@@ -426,13 +493,24 @@ namespace replay {
 					if(!eth_header->dst_is_broadcast())
 						eth_header->update_dst(m_dst_if_mac);
 					
-					//TODO: check if the IP is broadcast.
+					//TODO: check if the IP is broadcast. Is really needed (MAC will be boadcast anyways)?
 					eth_ip_header->ip_header.change_ips(m_src_if_ip, m_dst_if_ip);
+					
+					if (layer3::ipv4::ethernet_ipv4_fragmenter::fragment(data, pk_header.caplen)) {
+						uint8_t frags = layer3::ipv4::ethernet_ipv4_fragmenter::do_fragment(m_src_if, data, pk_header.caplen);
+						if (frags == 0)
+							m_failed_ptk_count++;
+						else
+							m_pkt_replayed += frags;
+					}
+					else {
 
-					if(pcap_sendpacket(m_src_if, data, pk_header.caplen) < 0)
-						m_failed_ptk_count++;	
-					else
-						m_pkt_replayed++;
+						fix_checksum(eth_ip_header, data);
+						if (pcap_sendpacket(m_src_if, data, full_packet_lg) < 0)
+							m_failed_ptk_count++;
+						else
+							m_pkt_replayed++;
+					}
 				}
 				else if(m_dst_set.find(src_original_mac) != m_dst_set.end())
 				{
@@ -441,13 +519,25 @@ namespace replay {
 					if(!eth_header->dst_is_broadcast())
 						eth_header->update_dst(m_src_if_mac);
 
-					//TODO: check if the IP is broadcast.
+					//TODO: check if the IP is broadcast. Is really needed (MAC will be boadcast anyways)?
 					eth_ip_header->ip_header.change_ips(m_dst_if_ip, m_src_if_ip);
 
-					if (pcap_sendpacket(m_dst_if, data, pk_header.caplen) < 0)
-						m_failed_ptk_count++;
-					else
-						m_pkt_replayed++;
+					if (layer3::ipv4::ethernet_ipv4_fragmenter::fragment(data, pk_header.caplen)) {
+						uint8_t frags = layer3::ipv4::ethernet_ipv4_fragmenter::do_fragment(m_src_if, data, pk_header.caplen);
+
+						if (frags == 0)
+							m_failed_ptk_count++;
+						else
+							m_pkt_replayed += frags;
+					}
+					else {
+
+						fix_checksum(eth_ip_header, data);
+						if (pcap_sendpacket(m_dst_if, data, full_packet_lg) < 0)
+							m_failed_ptk_count++;
+						else
+							m_pkt_replayed++;
+					}
 				}
 				else
 				{
@@ -457,21 +547,44 @@ namespace replay {
 					if(!eth_header->dst_is_broadcast())
 						eth_header->update_dst(m_dst_if_mac);
 
-					//TODO: check if the IP is broadcast.
+					//TODO: check if the IP is broadcast. Is really needed (MAC will be boadcast anyways)?
 					eth_ip_header->ip_header.change_ips(m_src_if_ip, m_dst_if_ip);
+					
+					if (layer3::ipv4::ethernet_ipv4_fragmenter::fragment(data, pk_header.caplen)) {
+						uint8_t frags = layer3::ipv4::ethernet_ipv4_fragmenter::do_fragment(m_src_if, data, pk_header.caplen);
 
-					if(pcap_sendpacket(m_src_if, data, pk_header.caplen) < 0)
-						m_failed_ptk_count++;
-					else
-						m_pkt_replayed++;
+						if (frags == 0)
+							m_failed_ptk_count++;
+						else
+							m_pkt_replayed += frags;
+					}
+					else {
+
+						fix_checksum(eth_ip_header, data);
+						if (pcap_sendpacket(m_src_if, data, full_packet_lg) < 0)
+							m_failed_ptk_count++;
+						else
+							m_pkt_replayed++;
+					}
 				}
 
 				if(!eth_header->dst_is_broadcast() && (m_dst_set.find(dst_original_mac) == m_dst_set.end()))
-					m_dst_set.insert(dst_original_mac);
+					m_dst_set.insert(dst_original_mac);				
 			}
 			else
 				m_l2_non_sp_ptk++;
 			
+			return false;
+		}
+
+		bool fix_checksum(layer3::ipv4::ethernet_ipv4_header_t* ip, const u_char *data)
+		{
+			if (ip->ip_header.upper_layer_type() == layer4::types_t::enums::tcp)
+				return layer4::tcp::eth_ipv4_tcp_header_t::fix_checksum(data);
+			
+			if (ip->ip_header.upper_layer_type() == layer4::types_t::enums::udp)
+				return layer4::udp::udp_eth_ipv4_packet_t::fix_checksum(data);
+
 			return false;
 		}
 
