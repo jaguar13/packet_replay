@@ -16,5 +16,18 @@ Requirements:
 - Super easy configuration :-).
 - Folder tree navigation Windows native.
 
+Replay Statistics:
+
+Total pcaps
+Corrupted pcaps
+Total packets
+Replayed packets
+Pcap with failed packets
+L2 non-supported packets
+Failed pachet count
+
+ 
+
+
 
 
