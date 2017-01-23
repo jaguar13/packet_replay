@@ -24,9 +24,9 @@ Replay Statistics:
 - Replayed packets
 - Pcap with failed packets
 - L2 non-supported packets
-- Failed pachet count
+- Failed packet count
 
-Example screeshot:
+Example screenhot:
 ![Alt text](/help/main.PNG?raw=true "Main Windows")
  
 
