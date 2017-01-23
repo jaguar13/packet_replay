@@ -18,13 +18,18 @@ Requirements:
 
 Replay Statistics:
 
-Total pcaps
-Corrupted pcaps
-Total packets
-Replayed packets
-Pcap with failed packets
-L2 non-supported packets
-Failed pachet count
+- Total pcaps
+- Corrupted pcaps
+- Total packets
+- Replayed packets
+- Pcap with failed packets
+- L2 non-supported packets
+- Failed pachet count
+
+Example screeshot:
+![Alt text](/help/main.PNG?raw=true "Main Windows")
+ 
+
 
  
 
