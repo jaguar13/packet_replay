@@ -2,6 +2,8 @@
 
 Packet replay tool.
 
+Better help in: https://wiki.jarvis.trendmicro.com/display/DSLABS/Packet+replay+tool
+
 Replays pcaps in the same way that TrafficIQ do but it is free :-).
 
 Requirements:
