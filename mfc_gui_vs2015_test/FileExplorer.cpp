@@ -75,6 +75,22 @@ void CFileExplorer::Destroy()
 	m_pIExplorerBrowser->Destroy();
 }
 
+void CFileExplorer::NavigatingUp()
+{
+	m_pIExplorerBrowser->BrowseToIDList(NULL, SBSP_PARENT);
+}
+
+void CFileExplorer::NavigatingForward()
+{
+	m_pIExplorerBrowser->BrowseToIDList(NULL, SBSP_NAVIGATEFORWARD);
+}
+
+void CFileExplorer::NavigatingBackward()
+{
+	m_pIExplorerBrowser->BrowseToIDList(NULL, SBSP_NAVIGATEBACK);
+}
+
+
 void CFileExplorer::GetSelectedFiles(CStringArray& arrSelection)
 {
 	CComPtr<IShellView> spSV;

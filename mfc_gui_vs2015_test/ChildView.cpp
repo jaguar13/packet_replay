@@ -12,7 +12,6 @@
 
 
 // CChildView
-
 CChildView::CChildView()
 {
 }
@@ -27,6 +26,9 @@ BEGIN_MESSAGE_MAP(CChildView, CWnd)
 	ON_WM_CREATE()
 	ON_WM_SIZE()
 	ON_WM_DESTROY()
+	ON_COMMAND(ID_EXPLORER_NAVIGATE_UP, &CChildView::OnNavigateUp)
+	ON_COMMAND(ID_EXPLORER_NAVIGATE_FORWARD, &CChildView::OnNavigateUp)
+	ON_COMMAND(ID_EXPLORER_NAVIGATE_BACKWARD, &CChildView::OnNavigateUp)
 END_MESSAGE_MAP()
 
 
@@ -111,5 +113,20 @@ void CChildView::OnDestroy()
 void CChildView::GetSelectedFiles(CStringArray& arrSelection)
 {
 	return m_fileExplorer.GetSelectedFiles(arrSelection);
+}
+
+void CChildView::OnNavigateUp()
+{
+	m_fileExplorer.NavigatingUp();
+}
+
+void CChildView::OnNavigateBack()
+{
+	m_fileExplorer.NavigatingBackward();
+}
+
+void CChildView::OnNavigateForward()
+{
+	m_fileExplorer.NavigatingForward();
 }
 

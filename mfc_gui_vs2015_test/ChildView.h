@@ -21,6 +21,9 @@ public:
 // Attributes
 public:
 	void OnUpdate();
+	void OnNavigateUp();
+	void OnNavigateBack();
+	void OnNavigateForward();
 
 // Operations
 public:

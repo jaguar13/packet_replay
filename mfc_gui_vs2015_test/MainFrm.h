@@ -42,10 +42,13 @@ protected:  // control bar embedded members
 	CMFCToolBarImages m_UserImages;
 	COutputWnd        m_wndOutput;
 	CPropertiesWnd    m_wndProperties;
-	CChildView    m_wndView;
+	CChildView        m_wndView;
 
 public:
 	void OnPlay();
+	//void OnNavigateBack();
+ //   void OnNavigateForward();
+	//void OnNavigateUp();
 
 // Generated message map functions
 protected:

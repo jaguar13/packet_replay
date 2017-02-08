@@ -21,6 +21,12 @@ public:
 
 	void Destroy();
 
+	void NavigatingUp();
+
+	void NavigatingForward();
+
+	void NavigatingBackward();
+
 public:
 	void GetSelectedFiles(CStringArray& arrSelection);
 	

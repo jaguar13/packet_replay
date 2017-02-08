@@ -66,8 +66,8 @@ namespace windows {
 		template <class Taction>
 		static bool dir_files(const char* path, Taction& action)
 		{
-			WIN32_FIND_DATA file;
-			HANDLE hFind = FindFirstFile(path, &file);
+			WIN32_FIND_DATAA file;
+			HANDLE hFind = FindFirstFileA(path, &file);
 
 			if (hFind == INVALID_HANDLE_VALUE)
 				return false;
@@ -84,9 +84,9 @@ namespace windows {
 				FindClose(hFind);
 				std::string dir(path);
 				dir.append("\\*.*");
-				hFind = FindFirstFile(dir.c_str(), &file);
+				hFind = FindFirstFileA(dir.c_str(), &file);
 
-				while (FindNextFile(hFind, &file))
+				while (FindNextFileA(hFind, &file))
 				{
 					if (file.dwFileAttributes & FILE_ATTRIBUTE_ARCHIVE)
 					{
@@ -95,6 +95,55 @@ namespace windows {
 						full_path.append(file.cFileName);
 						action.do_action(full_path.c_str());
 					}
+				}
+			}
+
+			FindClose(hFind);
+			return false;
+		}
+
+		template <class Taction>
+		static bool dir_files_recursive(const char* path, Taction& action)
+		{
+			WIN32_FIND_DATAA file;
+			HANDLE hFind = FindFirstFileA(path, &file);
+
+			if (hFind == INVALID_HANDLE_VALUE)
+				return false;
+
+			if (file.dwFileAttributes & FILE_ATTRIBUTE_ARCHIVE)
+			{
+				action.do_action(path);
+				FindClose(hFind);
+				return true;
+			}
+
+			if (file.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+			{
+				FindClose(hFind);
+				std::string dir(path);
+				dir.append("\\*.*");
+				hFind = FindFirstFileA(dir.c_str(), &file);
+
+				while (FindNextFileA(hFind, &file))
+				{
+					if (file.cFileName[0] == '.' && file.cFileName[1] == 0)
+						continue;
+
+					if (file.cFileName[0] == '.'
+						&& file.cFileName[1] == '.'
+						&& file.cFileName[2] == 0)
+						continue;
+
+					std::string full_path(path);
+					full_path.append("\\");
+					full_path.append(file.cFileName);
+
+					if (file.dwFileAttributes & FILE_ATTRIBUTE_ARCHIVE)
+						action.do_action(full_path.c_str());						
+										
+					if (file.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+						dir_files_recursive(full_path.c_str(), action);
 				}
 			}
 
