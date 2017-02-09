@@ -65,7 +65,7 @@ namespace layer3 {
 
 			void set_fragment_offset(uint16_t offset) {	fragment_offset = (offset >> 3) | 0x2000; }
 
-		private:
+		public:
 			void fix_header_checksum()
 			{
 				header_checksum = 0;
@@ -170,6 +170,7 @@ namespace layer3 {
 
 						fragment_ethip->ip_header.packet_length = ip_hd_length + ip_payload_max;
 						fragment_ethip->ip_header.set_fragment_offset(ip_fragment_offset);
+						fragment_ethip->ip_header.fix_header_checksum();
 
 						ip_payload_length -= ip_payload_max;
 						current_data_offset += ip_payload_max;
@@ -195,6 +196,8 @@ namespace layer3 {
 						fragment_ethip->ip_header.packet_length = ip_hd_length + ip_payload_length;
 						fragment_ethip->ip_header.set_fragment_offset(ip_fragment_offset);
 						fragment_ethip->ip_header.clear_more_fragments();
+						fragment_ethip->ip_header.fix_header_checksum();
+
 						ip_payload_length = 0;
 
 						if (pcap_sendpacket(dst_if, frag_packet_data,
