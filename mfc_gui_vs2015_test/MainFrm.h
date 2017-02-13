@@ -6,6 +6,7 @@
 #include "ChildView.h"
 #include "OutputWnd.h"
 #include "PropertiesWnd.h"
+#include "replay_action.hpp"
 
 class CMainFrame : public CFrameWndEx
 {
@@ -44,8 +45,16 @@ protected:  // control bar embedded members
 	CPropertiesWnd    m_wndProperties;
 	CChildView        m_wndView;
 
+	CWinThread*      m_ReplayThread;
+
+private:
+	replay_gui::replay_data* m_rdata;	
+
 public:
 	void OnPlay();
+	void StopReplay();
+	void OnUpdateReplay(CCmdUI* pCmdUI);
+	//UINT ReplayThreadProc(LPVOID Param);
 	//void OnNavigateBack();
  //   void OnNavigateForward();
 	//void OnNavigateUp();
@@ -60,6 +69,8 @@ protected:
 
 	BOOL CreateDockingWindows();
 	void SetDockingWindowIcons(BOOL bHiColorIcons);
+	
+	afx_msg void OnClose();
 };
 
 

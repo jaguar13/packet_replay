@@ -118,11 +118,16 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="ChildView.cpp" />
+    <ClCompile Include="CPULimiter.cpp" />
     <ClCompile Include="FileExplorer.cpp" />
     <ClCompile Include="MainFrm.cpp" />
     <ClCompile Include="mfc_gui.cpp" />
     <ClCompile Include="OutputWnd.cpp" />
     <ClCompile Include="PropertiesWnd.cpp" />
+    <ClCompile Include="settingsTV.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
@@ -130,6 +135,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ChildView.h" />
+    <ClInclude Include="CPULimiter.h" />
     <ClInclude Include="FileExplorer.h" />
     <ClInclude Include="MainFrm.h" />
     <ClInclude Include="mfc_gui.h" />
@@ -137,6 +143,7 @@
     <ClInclude Include="PropertiesWnd.h" />
     <ClInclude Include="replay_action.hpp" />
     <ClInclude Include="Resource.h" />
+    <ClInclude Include="settingsTV.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>

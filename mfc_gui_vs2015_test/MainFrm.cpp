@@ -31,6 +31,9 @@ BEGIN_MESSAGE_MAP(CMainFrame, CFrameWndEx)
 	ON_REGISTERED_MESSAGE(AFX_WM_CREATETOOLBAR, &CMainFrame::OnToolbarCreateNew)
 	ON_COMMAND(ID_FILE_REPLAY, &CMainFrame::OnPlay)
 	ON_COMMAND(ID_REPLAY_PCAP, &CMainFrame::OnPlay)
+	ON_COMMAND(ID_EXPLORER_REPLAY_STOP, &CMainFrame::StopReplay)
+	ON_UPDATE_COMMAND_UI(ID_REPLAY_PCAP, &CMainFrame::OnUpdateReplay)
+	ON_WM_CLOSE()
 END_MESSAGE_MAP()
 
 static UINT indicators[] =
@@ -46,10 +49,21 @@ static UINT indicators[] =
 CMainFrame::CMainFrame()
 {
 	// TODO: add member initialization code here
+	m_rdata = new replay_gui::replay_data();
+	m_ReplayThread = NULL;
 }
 
 CMainFrame::~CMainFrame()
 {
+	if (m_rdata != NULL)
+		delete m_rdata;
+
+	m_rdata = NULL;
+
+	if (m_ReplayThread != NULL)
+		delete m_ReplayThread;
+
+	m_ReplayThread = NULL;
 }
 
 int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
@@ -325,158 +339,134 @@ BOOL CMainFrame::LoadFrame(UINT nIDResource, DWORD dwDefaultStyle, CWnd* pParent
 	return TRUE;
 }
 
-void CMainFrame::OnPlay()
+UINT ReplayThreadProc(LPVOID Param) 
 {
-	m_wndOutput.DebugText(CString(_T("## Replaying ....")));
-	CStringArray files;
-	m_wndView.GetSelectedFiles(files);
+	replay_gui::replay_data* rp_data = (replay_gui::replay_data*)Param;
 
-	if (files.GetCount() == 0)
+	if (rp_data == NULL)
+		return TRUE;
+	
+	try
 	{
-		m_wndOutput.DebugText(CString(_T("No pcaps selected.")));
-		return;
+		rp_data->start();
+		rp_data->m_wndOutput->DebugText(CString(_T("Replaying ...")));
+
+
+		replay_gui::replay_action rp;
+		rp.m_wndOutput = rp_data->m_wndOutput;
+		rp.limiter = rp_data->cpu_limit;
+
+		if (!rp.init_from_if(rp_data->src, rp_data->dst, rp_data->is_disable_frag())) {
+			rp_data->done();
+			return TRUE;
+		}
+
+		for (int n = 0; n < rp_data->files.GetCount(); n++)
+		{
+			if (!rp_data->is_running())
+				break;
+
+			CString filePath = rp_data->files.GetAt(n);
+			std::string filePathA = CT2A(filePath);
+			rp_data->m_wndOutput->DebugText(CString(_T("Replaying pcap: ")) + filePath);
+
+			windows::fs::dir_files_recursive(filePathA.c_str(), rp, rp_data);
+		}
+
+		rp.dump_stats();
+		rp.clean_stats();	
+
+		rp_data->files.RemoveAll();
+		rp_data->m_wndOutput->DebugText(CString(_T("Replaying ended.")));
+
+		if (rp_data->dump_log)
+			rp_data->m_wndOutput->DumpLog();
+	}
+	catch (...)
+	{
+		rp_data->m_wndOutput->DebugText(CString(_T("Replaying ended with errors")));
 	}
 
-	std::string src = m_wndProperties.GetSourceIf();
-	std::string dst = m_wndProperties.GetDestinationIf();
+	rp_data->done();
 
-	replay_gui::replay_action rp;
-	rp.m_wndOutput = &m_wndOutput;
-
-	if (!rp.init_from_if(src, dst))
-		return;
-
-	for (int n = 0; n < files.GetCount(); n++)
-	{
-		CString filePath = files.GetAt(n);
-		std::string filePathA = CT2A(filePath);
-		m_wndOutput.DebugText(CString(_T("Replaying pcap: ")) + filePath);
-
-		windows::fs::dir_files_recursive(filePathA.c_str(), rp);
-	}
-
-	rp.dump_stats();
-	rp.clean_stats();
+	return TRUE;
 }
 
-//void CMainFrame::OnPlay1()
-//{
-//	m_wndOutput.DebugText(CString(_T("## Replaying ....")));
-//	CStringArray files;
-//	m_wndView.GetSelectedFiles(files);
-//
-//	if (files.GetCount() == 0)
-//	{
-//		m_wndOutput.DebugText(CString(_T("No pcaps selected.")));
-//		return;
-//	}
-//
-//	uint64_t failed_packet_count = 0;
-//	uint64_t l2_non_supported_packet_count = 0;
-//	uint64_t replayed_packet_count = 0;
-//	uint64_t packet_count = 0;
-//	std::vector<std::string> corrupted_pcaps;
-//	std::vector<std::string> failed_replays_pcaps;
-//	std::vector<std::string> l2_non_supported_replays_pcaps;
-//
-//	std::string src = m_wndProperties.GetSourceIf();
-//	std::string dst = m_wndProperties.GetDestinationIf();
-//
-//	replay::pcap_layer2_split_replay_t replay;
-//
-//	m_wndOutput.DebugText(CString(_T("Configuring interfaces...")));
-//	if (!replay.init(src.c_str(), dst.c_str())) {
-//		m_wndOutput.DebugText(CString(_T("Error configuring interfaces:")));
-//		return;
-//	}
-//	else
-//		m_wndOutput.DebugText(CString(_T("Successfully configuring interfaces:")));
-//
-//	if(src == dst)
-//		m_wndOutput.DebugText(CString(_T("Warnning!! Source and Destination interface are the same.")));
-//
-//	m_wndOutput.DebugText(CString(_T("Source:      ")) + CString(src.c_str()));
-//	m_wndOutput.DebugText(CString(_T("Destination: ")) + CString(dst.c_str()));
-//
-//	for (int n = 0; n < files.GetCount(); n++)
-//	{
-//		CString filePath = files.GetAt(n);
-//		std::string filePathA = CT2A(filePath);
-//		m_wndOutput.DebugText(CString(_T("Replaying pcap: ")) + filePath);
-//
-//		replay::offline_pcap_t pcap;
-//		if (!pcap.open(pcap, filePathA.c_str()))
-//		{
-//			corrupted_pcaps.push_back(filePathA.c_str());
-//			m_wndOutput.DebugText(CString(_T("Error corrupted pcap: ")) + filePath);
-//			continue;
-//		}		
-//
-//		replay::pcap_layer2_split_replay_t::play_back(replay, pcap);
-//
-//		replayed_packet_count += replay.get_replayed_packet_count();
-//		packet_count += replay.get_packet_count();
-//
-//		if (replay.has_bad_ptks())
-//		{
-//			if (replay.get_l2_non_supported_packet_count() > 0)
-//				l2_non_supported_replays_pcaps.push_back(filePathA.c_str());
-//
-//			if (replay.get_failed_packet_count() > 0)
-//				failed_replays_pcaps.push_back(filePathA.c_str());
-//
-//			failed_packet_count += replay.get_failed_packet_count();
-//			l2_non_supported_packet_count += replay.get_l2_non_supported_packet_count();
-//		}
-//
-//		replay.clean_stats();
-//	}
-//
-//	CString stat;
-//	m_wndOutput.DebugText(CString(_T("Replay stats: ")));
-//
-//	stat.Format(_T("  Total pcaps: %d"), files.GetCount());
-//	m_wndOutput.DebugText(stat);
-//	stat.Format(_T("  Corrupted pcaps: %d"), corrupted_pcaps.size());
-//	m_wndOutput.DebugText(stat);
-//	stat.Format(_T("  Total packets: %d"), packet_count);
-//	m_wndOutput.DebugText(stat);
-//	stat.Format(_T("  Replayed packets: %d"), replayed_packet_count);
-//	m_wndOutput.DebugText(stat);
-//	stat.Format(_T("  Pcaps with failed packets: %d"), failed_replays_pcaps.size());
-//	m_wndOutput.DebugText(stat);
-//	stat.Format(_T("  L2 non-suported packets: %d"), l2_non_supported_packet_count);
-//	m_wndOutput.DebugText(stat);
-//	stat.Format(_T("  Failed packet count: %d"), failed_packet_count);
-//	m_wndOutput.DebugText(stat);
-//	
-//	if (corrupted_pcaps.size() > 0)
-//	{
-//		m_wndOutput.DebugText(CString(_T("  Corrupted pcaps list :")));
-//		for (size_t i = 0; i < corrupted_pcaps.size(); i++)
-//			m_wndOutput.DebugText(CString(_T("   ")) + CString(corrupted_pcaps[i].c_str()));
-//	}
-//
-//	if (l2_non_supported_replays_pcaps.size() > 0)
-//	{
-//		m_wndOutput.DebugText(CString(_T("  Pcaps with L2 layer non-suppored :")));
-//		for (size_t i = 0; i < l2_non_supported_replays_pcaps.size(); i++)
-//			m_wndOutput.DebugText(CString(_T("   ")) + CString(l2_non_supported_replays_pcaps[i].c_str()));
-//	}
-//
-//	if (failed_replays_pcaps.size() > 0)
-//	{
-//		m_wndOutput.DebugText(CString(_T("  Pcaps with failed packets list :")));
-//		for (size_t i = 0; i < failed_replays_pcaps.size(); i++)
-//			m_wndOutput.DebugText(CString(_T("   ")) + CString(failed_replays_pcaps[i].c_str()));
-//	}
-//
-//	if (corrupted_pcaps.size() > 0 
-//		|| failed_replays_pcaps.size() > 0 
-//		|| l2_non_supported_replays_pcaps.size() > 0)
-//		m_wndOutput.DebugText(CString(_T("Error replaying some pcaps..")));
-//	else
-//		m_wndOutput.DebugText(CString(_T("Successfully replay.")));
-//
-//}
+void CMainFrame::OnPlay()
+{
+	if (m_rdata->is_running()) 
+	{
+		m_wndOutput.DebugText(CString(_T("Wait to finish or Stop the Replaying ....")));
+		return;
+	}	
+
+	m_wndProperties.SaveSettings();
+	m_wndView.GetSelectedFiles(m_rdata->files);
+	if (m_rdata->files.GetCount() == 0)
+	{
+		m_wndOutput.DebugText(CString(_T("No pcaps selected.")));
+		m_rdata->done();
+		return;
+	}
+
+	m_rdata->dump_log = m_wndProperties.IsDumpLogEnable();
+	m_rdata->src = m_wndProperties.GetSourceIf();
+	m_rdata->dst = m_wndProperties.GetDestinationIf();
+	m_rdata->cpu_limit = m_wndProperties.CPULimit();
+	m_rdata->m_wndOutput = &m_wndOutput;
+	m_rdata->disable_frag = m_wndProperties.IsFragmentationDisable();
+	
+	if (m_ReplayThread != NULL)
+		delete m_ReplayThread;
+
+	m_ReplayThread = AfxBeginThread(ReplayThreadProc, (LPVOID)m_rdata);
+	m_ReplayThread->m_bAutoDelete = FALSE;
+}
+
+void CMainFrame::StopReplay() 
+{
+	if (m_rdata == NULL)
+		return;
+
+	m_wndOutput.DebugText(CString(_T("Aborting...")));
+	m_rdata->stop();
+}
+
+void CMainFrame::OnUpdateReplay(CCmdUI* pCmdUI)
+{
+	int b_id = m_wndToolBar.CommandToIndex(ID_REPLAY_PCAP);
+	if (m_rdata->is_running()) 
+		m_wndToolBar.SetButtonStyle(b_id, TBBS_DISABLED | TBBS_CHECKED);
+	else
+		m_wndToolBar.SetButtonStyle(b_id, TBSTATE_ENABLED);
+}
+
+void CMainFrame::OnClose()
+{
+	try
+	{
+		m_wndProperties.SaveSettings();
+		if (m_rdata->is_running())
+		{
+			DWORD exit_code = NULL;
+			m_rdata->stop();
+			if (m_ReplayThread != NULL)
+			{
+				GetExitCodeThread(m_ReplayThread->m_hThread, &exit_code);
+				if (exit_code == STILL_ACTIVE)
+				{
+					::TerminateThread(m_ReplayThread->m_hThread, 0);
+					CloseHandle(m_ReplayThread->m_hThread);
+				}
+				
+				m_ReplayThread->m_hThread = NULL;
+				delete m_ReplayThread;
+				m_ReplayThread = NULL;
+			}
+		}
+	}
+	catch (...)	{}
+	
+	CFrameWndEx::OnClose();
+}
 

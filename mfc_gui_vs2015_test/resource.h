@@ -42,13 +42,14 @@
 #define ID_EXPLORER_NAVIGATE_FORWARD    32781
 #define ID_EXPLORER_NAVIGATEUP          32782
 #define ID_EXPLORER_NAVIGATE_BACKWARD   32782
+#define ID_EXPLORER_REPLAY_STOP         32783
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        329
-#define _APS_NEXT_COMMAND_VALUE         32783
+#define _APS_NEXT_COMMAND_VALUE         32784
 #define _APS_NEXT_CONTROL_VALUE         1000
 #define _APS_NEXT_SYMED_VALUE           310
 #endif

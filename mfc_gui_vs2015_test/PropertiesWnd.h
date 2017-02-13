@@ -2,7 +2,7 @@
 #pragma once
 
 #include "pcap.h"
-
+#include "settingsTV.h"
 
 class CPropertiesToolBar : public CMFCToolBar
 {
@@ -40,12 +40,27 @@ protected:
 private:
 	CMFCPropertyGridProperty* pSourceIf;
 	CMFCPropertyGridProperty* pDestinationIf;
+	CMFCPropertyGridProperty* pCPUusage;
+	CMFCPropertyGridProperty* pDumpLog;
+	CMFCPropertyGridProperty* pDisableFrag;
+	SCL::settingsTV* pProgramSettings;
+	std::string m_SettingFile;
 
 public:
 	bool do_action(pcap_if_t* ifdev = 0);
 
-	std::string GetSourceIf();
+	std::string GetSourceIf();	
+	std::string GetSourceIP();
 	std::string GetDestinationIf();
+	std::string GetDestinationIP();
+	int CPULimit();
+	std::string GetCPU();
+	bool IsDumpLogEnable();
+	std::string GetDumpLogEnable();
+	bool IsFragmentationDisable();
+	std::string GetFragmentationDisable();
+	bool SaveSettings();
+	bool LoadSettings();
 
 private:
 	std::vector<std::string> m_if_names;

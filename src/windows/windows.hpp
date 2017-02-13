@@ -102,9 +102,12 @@ namespace windows {
 			return false;
 		}
 
-		template <class Taction>
-		static bool dir_files_recursive(const char* path, Taction& action)
+		template <class Taction, class Tsignal>
+		static bool dir_files_recursive(const char* path, Taction& action, Tsignal* sig)
 		{
+			if (!sig->is_running())
+				return true;
+
 			WIN32_FIND_DATAA file;
 			HANDLE hFind = FindFirstFileA(path, &file);
 
@@ -113,6 +116,9 @@ namespace windows {
 
 			if (file.dwFileAttributes & FILE_ATTRIBUTE_ARCHIVE)
 			{
+				if (!sig->is_running())
+					return true;
+
 				action.do_action(path);
 				FindClose(hFind);
 				return true;
@@ -127,6 +133,9 @@ namespace windows {
 
 				while (FindNextFileA(hFind, &file))
 				{
+					if (!sig->is_running())
+						return true;
+
 					if (file.cFileName[0] == '.' && file.cFileName[1] == 0)
 						continue;
 
@@ -140,15 +149,20 @@ namespace windows {
 					full_path.append(file.cFileName);
 
 					if (file.dwFileAttributes & FILE_ATTRIBUTE_ARCHIVE)
-						action.do_action(full_path.c_str());						
+					{
+						if (!sig->is_running())
+							return true;
+
+						action.do_action(full_path.c_str());
+					}
 										
 					if (file.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-						dir_files_recursive(full_path.c_str(), action);
+						dir_files_recursive(full_path.c_str(), action, sig);
 				}
 			}
 
 			FindClose(hFind);
 			return false;
-		}
+		}		
 	};
 }

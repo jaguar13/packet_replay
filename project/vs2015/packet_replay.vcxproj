@@ -89,6 +89,7 @@
     <ClInclude Include="..\..\src\protocols\layer2\common.hpp" />
     <ClInclude Include="..\..\src\protocols\layer2\ethernet2.hpp" />
     <ClInclude Include="..\..\src\protocols\layer3\common.hpp" />
+    <ClInclude Include="..\..\src\protocols\layer3\ethernet_ipv4_fragmenter.hpp" />
     <ClInclude Include="..\..\src\protocols\layer3\ipv4.hpp" />
     <ClInclude Include="..\..\src\protocols\layer4\common.hpp" />
     <ClInclude Include="..\..\src\protocols\layer4\flows.hpp" />

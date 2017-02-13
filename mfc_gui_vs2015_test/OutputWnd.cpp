@@ -170,4 +170,25 @@ void COutputWnd::DebugText(CString & text)
 	m_wndOutputDebug.SetCurSel(m_wndOutputDebug.GetCount() - 1);
 }
 
+void COutputWnd::DumpLog()
+{
+	try
+	{
+		CString strText;
+		CFile log(L"packet_replay.log", CFile::modeReadWrite | CFile::modeCreate);
+
+		DebugText(CString(L"Dumping log: packet_replay.log"));
+		for (int i = 0; i < m_wndOutputDebug.GetCount(); i++)
+		{
+			m_wndOutputDebug.GetText(i, strText);
+			log.Write((LPCTSTR)strText, strText.GetLength() * sizeof(TCHAR));
+			log.Write(L"\r\n", 2 * sizeof(TCHAR));
+		}
+	}
+	catch (...)
+	{
+		DebugText(CString(L"Unable to create the log file"));
+	}
+}
+
 

@@ -58,10 +58,30 @@ static char THIS_FILE[]=__FILE__;
 
 CPropertiesWnd::CPropertiesWnd()
 {
+	m_SettingFile = "packet_replay_settings.txt";
+	pProgramSettings = new SCL::settingsTV;	
+
+	SCL::setting_initializer pgmInitialSettings[] =
+	{
+		{ "","src_ip"   , ST_STR, "0.0.0.0" , "" },
+		{ "","dst_ip"   , ST_STR ,"0.0.0.0" , "" },
+		{ "","cpu"      , ST_STR, "40"      , "" },
+		{ "","dump_log" , ST_STR, "False"   , "" },
+		{ "","frag_off" , ST_STR, "True"    , "" }
+	};
+
+	uint32_t numSettings =
+		sizeof(pgmInitialSettings) / sizeof(SCL::setting_initializer);
+
+	uint32_t rc = pProgramSettings->init(numSettings, pgmInitialSettings);
 }
 
 CPropertiesWnd::~CPropertiesWnd()
 {
+	if (pProgramSettings != NULL)
+		delete pProgramSettings;
+
+	pProgramSettings = NULL;
 }
 
 BEGIN_MESSAGE_MAP(CPropertiesWnd, CDockablePane)
@@ -202,13 +222,45 @@ void CPropertiesWnd::InitPropList()
 	m_wndPropList.SetVSDotNetLook();
 	m_wndPropList.MarkModifiedProperties();
 
+	
+	std::string src_ip;
+	std::string dst_ip;
+	std::string cpu;
+	std::string dump_log;	
+	std::string frag_off;
+
 	replay::pcap_devs_t devs;
 	devs.get_ifs(*(const_cast<CPropertiesWnd*>(this)));
 
+	if (LoadSettings()) 
+	{
+		pProgramSettings->getStrSetting("", "src_ip", src_ip);
+		pProgramSettings->getStrSetting("", "dst_ip", dst_ip);
+		pProgramSettings->getStrSetting("", "cpu", cpu);
+		pProgramSettings->getStrSetting("", "dump_log", dump_log);
+		pProgramSettings->getStrSetting("", "frag_off", frag_off);
+	}
+	else 
+	{
+		src_ip = m_if_names[0];
+		dst_ip = m_if_names[0];
+		cpu = "40";
+		dump_log = "False";
+		frag_off = "False";
+	}
+
+	if(src_ip == "0.0.0.0")
+		src_ip = m_if_names[0];
+
+	if (dst_ip == "0.0.0.0")
+		dst_ip = m_if_names[0];
+
+	CMFCPropertyGridProperty* pGroup1 = new CMFCPropertyGridProperty(_T("Application Settings"));
+
 	if(m_if_names.size() > 0)
 	{
-		CMFCPropertyGridProperty* pGroup1 = new CMFCPropertyGridProperty(_T("Replay Interfaces"));
-		pSourceIf = new CMFCPropertyGridProperty(_T("Source"), CString(m_if_names[0].c_str()), _T("Source interface to replay packets"));
+		
+		pSourceIf = new CMFCPropertyGridProperty(_T("Source"), CString(src_ip.c_str()), _T("Source interface to replay packets"));
 		pSourceIf->AllowEdit(FALSE);
 
 		for(size_t i = 0; i < m_if_names.size(); i++)
@@ -216,15 +268,43 @@ void CPropertiesWnd::InitPropList()
 		
 		pGroup1->AddSubItem(pSourceIf);
 		
-		pDestinationIf = new CMFCPropertyGridProperty(_T("Destination"), CString(m_if_names[0].c_str()), _T("Destination interface to replay packets"));
+		pDestinationIf = new CMFCPropertyGridProperty(_T("Destination"), CString(dst_ip.c_str()), _T("Destination interface to replay packets"));
 		pDestinationIf->AllowEdit(FALSE);
 		
 		for(size_t i = 0; i < m_if_names.size(); i++)
 			pDestinationIf->AddOption(CString(m_if_names[i].c_str()));
 
-		pGroup1->AddSubItem(pDestinationIf);
-		m_wndPropList.AddProperty(pGroup1);
+		pGroup1->AddSubItem(pDestinationIf);		
 	}	
+
+	pCPUusage = new CMFCPropertyGridProperty(_T("CPU %"), CString(cpu.c_str()), _T("Control the CPU usage while repaying"));
+	pCPUusage->AllowEdit(FALSE);
+
+	for (size_t i = 10; i <= 100; i += 10) {
+		CString percent;
+		percent.Format(_T("%d"), i);
+		pCPUusage->AddOption(percent);
+	}
+
+	pGroup1->AddSubItem(pCPUusage);
+
+	pDumpLog = new CMFCPropertyGridProperty(_T("Dump Log"), CString(dump_log.c_str()), _T("Generate Log file"));
+	pDumpLog->AllowEdit(FALSE);
+
+	pDumpLog->AddOption(CString("True"));
+	pDumpLog->AddOption(CString("False"));
+
+	pGroup1->AddSubItem(pDumpLog);
+
+	pDisableFrag = new CMFCPropertyGridProperty(_T("Disable Fragmentation"), CString(frag_off.c_str()), _T("When Fragementation is required then only replay the first fragment."));
+	pDisableFrag->AllowEdit(FALSE);
+
+	pDisableFrag->AddOption(CString("True"));
+	pDisableFrag->AddOption(CString("False"));
+
+	pGroup1->AddSubItem(pDisableFrag);
+
+	m_wndPropList.AddProperty(pGroup1);
 }
 
 void CPropertiesWnd::OnSetFocus(CWnd* pOldWnd)
@@ -287,6 +367,32 @@ bool CPropertiesWnd::do_action(pcap_if_t* ifdev /*= 0*/)
 	return false;
 }
 
+bool CPropertiesWnd::SaveSettings() 
+{
+	pProgramSettings->setStrSetting("", "src_ip", GetSourceIP());
+	pProgramSettings->setStrSetting("", "dst_ip", GetDestinationIP());
+	pProgramSettings->setStrSetting("", "cpu", GetCPU());
+	pProgramSettings->setStrSetting("", "dump_log", GetDumpLogEnable());
+	pProgramSettings->setStrSetting("", "frag_off", GetFragmentationDisable());
+
+	return pProgramSettings->saveSettingsToFile(m_SettingFile, true) == SCL::SERC_SUCCESS;	 
+}
+
+bool CPropertiesWnd::LoadSettings()
+{
+	bool fileSettingVersionDifferent = false;
+	string importErrStr;
+	SCL::SettingsImportType importType = SCL::IMPORT_ALL;
+	SCL::SettingsImportErrType irc = pProgramSettings->importSettingsFromFile(
+		m_SettingFile,
+		importType, 
+		fileSettingVersionDifferent, 
+		importErrStr, 
+		NULL);
+
+	return irc == SCL::SIRC_SUCCESS;	
+}
+
 std::string CPropertiesWnd::GetSourceIf()
 {
 	CString val = pSourceIf->GetValue();
@@ -299,6 +405,13 @@ std::string CPropertiesWnd::GetSourceIf()
 	return if_id.m_id;
 }
 
+std::string CPropertiesWnd::GetSourceIP()
+{
+	CString val = pSourceIf->GetValue();
+	std::string ip = CT2A(val);
+	return ip;
+}
+
 std::string CPropertiesWnd::GetDestinationIf()
 {
 	CString val = pDestinationIf->GetValue();
@@ -309,6 +422,54 @@ std::string CPropertiesWnd::GetDestinationIf()
 	devs.get_ifs(if_id);
 
 	return if_id.m_id;
+}
+
+std::string CPropertiesWnd::GetDestinationIP()
+{
+	CString val = pDestinationIf->GetValue();
+	std::string ip = CT2A(val);
+
+	return ip;
+}
+
+bool CPropertiesWnd::IsDumpLogEnable()
+{
+	CString val = pDumpLog->GetValue();
+	return val.Compare(L"True") == 0;
+}
+
+std::string CPropertiesWnd::GetDumpLogEnable()
+{
+	CString val = pDumpLog->GetValue();
+	std::string log = CT2A(val);
+	return log;
+}
+
+bool CPropertiesWnd::IsFragmentationDisable()
+{
+	CString val = pDisableFrag->GetValue();
+	return val.Compare(L"True") == 0;
+}
+
+std::string CPropertiesWnd::GetFragmentationDisable()
+{
+	CString val = pDisableFrag->GetValue();
+	std::string num = CT2A(val);
+	return num;
+}
+
+int CPropertiesWnd::CPULimit()
+{
+	CString val = pCPUusage->GetValue();	
+	std::string num = CT2A(val);
+	return  atoi(num.c_str());
+}
+
+std::string CPropertiesWnd::GetCPU()
+{
+	CString val = pCPUusage->GetValue();
+	std::string num = CT2A(val);
+	return num;
 }
 
 

@@ -92,6 +92,9 @@
     <ClInclude Include="..\..\src\protocols\layer4\udp.hpp">
       <Filter>Header Files\protocols\layer4</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\protocols\layer3\ethernet_ipv4_fragmenter.hpp">
+      <Filter>Header Files\protocols\layer3</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="todo.txt" />

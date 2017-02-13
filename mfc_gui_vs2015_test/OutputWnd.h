@@ -31,6 +31,7 @@ public:
 
 public:
 	void DebugText(CString& text);	
+	void DumpLog();	
 
 // Attributes
 protected:

@@ -2,10 +2,43 @@
 
 #include "stdafx.h"
 #include "OutputWnd.h"
+#include "CPULimiter.h"
 #include "traffic_replay.hpp"
 #include <cmd_actions/pcap_devs_action_getif_t.hpp>
 
 namespace replay_gui {
+
+	struct replay_data 
+	{
+		COutputWnd*  m_wndOutput;
+		CStringArray files;
+		std::string src;
+		std::string dst;
+		int cpu_limit;
+		bool started;
+		bool dump_log;
+		bool disable_frag;
+
+		replay_data() 
+		{
+			m_wndOutput = NULL;
+			cpu_limit = 0;
+			started = false;
+			dump_log = false;
+			disable_frag = false;
+		}
+
+		bool is_running() { return started; }
+
+		void stop() { started = false; }
+
+		void start() { started = true; }
+
+		void done() { started = false; }
+
+		bool is_disable_frag() { return disable_frag; }
+	};
+
 
 	struct replay_action
 	{
@@ -17,6 +50,7 @@ namespace replay_gui {
 		uint64_t replayed_packet_count = 0;
 		uint64_t packet_count = 0;
 		uint64_t pcap_count = 0;
+		bool disable_frag = false;
 
 		std::vector<std::string> corrupted_pcaps;
 		std::vector<std::string> failed_replays_pcaps;
@@ -27,11 +61,13 @@ namespace replay_gui {
 
 		replay::pcap_layer2_split_replay_t replay;
 
+		CPULimiter limiter;
+
 	public:	
-		bool init_from_if(std::string src, std::string dst)
+		bool init_from_if(std::string src, std::string dst, bool disable_frag = false)
 		{
 			m_wndOutput->DebugText(CString(_T("Configuring interfaces...")));
-			if (!replay.init(src.c_str(), dst.c_str())) {
+			if (!replay.init(src.c_str(), dst.c_str(), disable_frag)) {
 				m_wndOutput->DebugText(CString(_T("Error configuring interfaces:")));
 				return false;
 			}
@@ -50,6 +86,7 @@ namespace replay_gui {
 		bool do_action(const char* pcap_file)
 		{
 			pcap_count++;
+			limiter.CalculateAndSleep();
 			
 			m_wndOutput->DebugText(CString(_T("Replaying pcap: ")) + CString(pcap_file));
 
