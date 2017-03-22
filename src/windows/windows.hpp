@@ -149,6 +149,7 @@ namespace windows {
 					full_path.append("\\");
 					full_path.append(file.cFileName);
 
+					//FILE_ATTRIBUTE_NORMAL: no attribute was set in the file
 					if ((file.dwFileAttributes & FILE_ATTRIBUTE_ARCHIVE)
 						|| (file.dwFileAttributes & FILE_ATTRIBUTE_NORMAL))
 					{
