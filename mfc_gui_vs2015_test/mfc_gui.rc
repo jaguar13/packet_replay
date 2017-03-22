@@ -216,7 +216,7 @@ CAPTION "About Replay"
 FONT 8, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
     ICON            IDR_MAINFRAME,IDC_STATIC,14,14,20,20
-    LTEXT           "Replay, Version 1.2.3.0",IDC_STATIC,42,14,114,8,SS_NOPREFIX
+    LTEXT           "Replay, Version 1.2.4.0",IDC_STATIC,42,14,114,8,SS_NOPREFIX
     LTEXT           "Copyright (C) 2017",IDC_STATIC,42,26,114,8
     DEFPUSHBUTTON   "OK",IDOK,115,42,50,14,WS_GROUP
 END
@@ -228,8 +228,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,2,3,0
- PRODUCTVERSION 1,2,3,0
+ FILEVERSION 1,2,4,0
+ PRODUCTVERSION 1,2,4,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -246,12 +246,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Trend Micro"
             VALUE "FileDescription", "DSLABS replay tool"
-            VALUE "FileVersion", "1.2.3.0"
+            VALUE "FileVersion", "1.2.4.0"
             VALUE "InternalName", "replay.exe"
             VALUE "LegalCopyright", "Trend Micro.  All rights reserved."
             VALUE "OriginalFilename", "replay.exe"
             VALUE "ProductName", "Replay"
-            VALUE "ProductVersion", "1.2.3.0"
+            VALUE "ProductVersion", "1.2.4.0"
         END
     END
     BLOCK "VarFileInfo"

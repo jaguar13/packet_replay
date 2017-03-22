@@ -1,5 +1,4 @@
 Done:
-
 	- Bulk replaying on the interface. Replaying thread
 	- CPU throlling.
 	- Stop replaying
@@ -10,7 +9,15 @@ Done:
 	- Fake replay for fragmented packets. Replay only the first packet.
 	- TCP checksum on fragmented packet fixed.
 	
+Done (2017/02/14)
+    - Fixed stats calculation at GUI.
+	-  
+
 Pending Features:
+    - Sumit reported pcaps (3)
+    - Command line recursive iteration.
+	- Support Linux Cooked Capture.
+
     - Suport Mounted drive.	
 	- IP editing (Avoid OS close packets)
 	  - Require Interface selection.
@@ -27,6 +34,7 @@ Pending BUGs:
 	- Server side rules are not detecting fragmented packets
 	- Sumit reported PCAPS - HTTP.sys rule
 	- Sumit reported problem
+	- command line should say 0 pcap on empty folders, when the path has spaces.
 
 
 	References:

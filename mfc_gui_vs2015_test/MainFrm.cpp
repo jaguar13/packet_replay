@@ -367,8 +367,7 @@ UINT ReplayThreadProc(LPVOID Param)
 				break;
 
 			CString filePath = rp_data->files.GetAt(n);
-			std::string filePathA = CT2A(filePath);
-			rp_data->m_wndOutput->DebugText(CString(_T("Replaying pcap: ")) + filePath);
+			std::string filePathA = CT2A(filePath);		
 
 			windows::fs::dir_files_recursive(filePathA.c_str(), rp, rp_data);
 		}

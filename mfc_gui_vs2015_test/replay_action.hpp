@@ -115,6 +115,8 @@ namespace replay_gui {
 				l2_non_supported_packet_count += replay.get_l2_non_supported_packet_count();
 			}
 
+			replay.clean_stats();
+
 			return true;
 		}
 

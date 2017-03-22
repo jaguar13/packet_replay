@@ -114,7 +114,8 @@ namespace windows {
 			if (hFind == INVALID_HANDLE_VALUE)
 				return false;
 
-			if (file.dwFileAttributes & FILE_ATTRIBUTE_ARCHIVE)
+			if ((file.dwFileAttributes & FILE_ATTRIBUTE_ARCHIVE)
+				|| (file.dwFileAttributes & FILE_ATTRIBUTE_NORMAL))
 			{
 				if (!sig->is_running())
 					return true;
@@ -148,7 +149,8 @@ namespace windows {
 					full_path.append("\\");
 					full_path.append(file.cFileName);
 
-					if (file.dwFileAttributes & FILE_ATTRIBUTE_ARCHIVE)
+					if ((file.dwFileAttributes & FILE_ATTRIBUTE_ARCHIVE)
+						|| (file.dwFileAttributes & FILE_ATTRIBUTE_NORMAL))
 					{
 						if (!sig->is_running())
 							return true;
