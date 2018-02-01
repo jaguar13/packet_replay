@@ -97,8 +97,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <Text Include="todo.txt" />
-    <Text Include="protocols.txt" />
     <Text Include="commands.txt" />
   </ItemGroup>
 </Project>

@@ -1,6 +1,0 @@
-cpu          STR "40"             // 
-delay        STR "1000"           // 
-dst_ip       STR "10.203.144.122" // 
-dump_log     STR "False"          // 
-frag_off     STR "False"          // 
-src_ip       STR "10.203.144.122" // 

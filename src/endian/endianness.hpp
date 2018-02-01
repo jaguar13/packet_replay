@@ -1,3 +1,6 @@
+/*
+	external sourced file.
+*/
 #pragma once 
 #include "bittypes.h"
 
