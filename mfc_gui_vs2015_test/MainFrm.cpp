@@ -351,7 +351,6 @@ UINT ReplayThreadProc(LPVOID Param)
 		rp_data->start();
 		rp_data->m_wndOutput->DebugText(CString(_T("Replaying ...")));
 
-
 		replay_gui::replay_action rp;
 		rp.m_wndOutput = rp_data->m_wndOutput;
 		rp.limiter = rp_data->cpu_limit;
@@ -369,7 +368,7 @@ UINT ReplayThreadProc(LPVOID Param)
 			CString filePath = rp_data->files.GetAt(n);
 			std::string filePathA = CT2A(filePath);		
 
-			windows::fs::dir_files_recursive(filePathA.c_str(), rp, rp_data);
+			windows::fs::dir_files_recursive(filePathA.c_str(), rp, rp_data, rp_data->delay);
 		}
 
 		rp.dump_stats();
@@ -414,6 +413,7 @@ void CMainFrame::OnPlay()
 	m_rdata->cpu_limit = m_wndProperties.CPULimit();
 	m_rdata->m_wndOutput = &m_wndOutput;
 	m_rdata->disable_frag = m_wndProperties.IsFragmentationDisable();
+	m_rdata->delay = m_wndProperties.GetDelayValue();
 	
 	if (m_ReplayThread != NULL)
 		delete m_ReplayThread;

@@ -6,8 +6,12 @@
 
 using namespace replay;
 
+#define VERSION "1.2.6.0"
+void print_version() { std::cout << "pcap replay tool: " << VERSION << std::endl; }
+
 void help()
 {
+	print_version();
 	std::cout << "Usage:" << std::endl;
 	std::cout << "    -l" << std::endl;
 	std::cout << "         list interfaces" << std::endl;
@@ -27,14 +31,20 @@ void help()
 	std::cout << "    -p pcap_path -sip source_ip -dip destination_ip" << std::endl;
 	std::cout << "         replay a pcap from source IP to destination IP. Map from IP to interface will be done automatically" << std::endl;
 	std::cout << std::endl;
-	std::cout << "    -r pcap_folder_path|pcap_file_path -sip source_ip -dip destination_ip" << std::endl;
+	std::cout << "    -r pcap_folder_path|pcap_file_path -sip source_ip -dip destination_ip -de delay_millisecs" << std::endl;
 	std::cout << "         replay a pcaps in folder from source IP to destination IP. Map from IP to interface will be done automatically" << std::endl;
+	std::cout << "         delay_millisecs: delay between pcaps files." << std::endl;
 	std::cout << std::endl;
-	std::cout << "    -r pcap_folder_path|pcap_file_path -si source_interface_name -di destination_interface_name -sip source_ip -dip destination_ip" << std::endl;
+	std::cout << "    -r pcap_folder_path|pcap_file_path -si source_interface_name -di destination_interface_name -sip source_ip -dip destination_ip -de delay_millisecs" << std::endl;
 	std::cout << "         replay a pcaps in folder from any source IP to any destination IP." << std::endl;
+	std::cout << "         delay_millisecs: delay between pcaps files." << std::endl;
 	std::cout << std::endl;
-	std::cout << "    -r pcap_folder_path|pcap_file_path -s source_interface_name -d destination_interface_name" << std::endl;
+	std::cout << "    -r pcap_folder_path|pcap_file_path -s source_interface_name -d destination_interface_name -de delay_millisecs" << std::endl;
 	std::cout << "         replay a pcaps in folder pcap_folder_path from source to destination selected interface" << std::endl;
+	std::cout << "         delay_millisecs: delay between pcaps files." << std::endl;
+	std::cout << std::endl;
+	std::cout << "    -v" << std::endl;
+	std::cout << "        print command line version." << std::endl;
 
 	std::cout << std::endl;
 	std::cout << std::endl;
@@ -71,29 +81,24 @@ void replay_pcap_if(const char* pcap_file, const char* src_if, const char* dst_i
 	pcap_layer2_split_replay_t split;
 	if (split.init(src_if, dst_if))
 		pcap_layer2_split_replay_t::play_back(split, pcap_replay);
-	else
-	{
+	else{
 		std::cout << "Error, Traffic file:" << pcap_file << "Note: Failed configuring interfaces." << std::endl;
 		return;
 	}
 
-	if (stats)
-	{
-		if (split.has_bad_ptks())
-		{
+	if (stats)	{
+		if (split.has_bad_ptks()){
 			std::cout << "Falied stats: " << std::endl;
 			std::cout << "  L2 non-suported packets: " << split.get_l2_non_supported_packet_count() << std::endl;
 			std::cout << "  Failed packet count:     " << split.get_failed_packet_count() << std::endl;
 		}
 	}
-	else
-	{
+	else{
 		if (split.has_bad_ptks())
 			std::cout << "Warnning, Traffic file:" << pcap_file << "Note: Some packets failed, usualy are jumbo packtes." << std::endl;
 	}
 
-	if (stats)
-	{
+	if (stats)	{
 		std::cout << "Replay completed. " << std::endl
 			<< "   packet count:  " << split.get_replayed_packet_count() << std::endl;
 	}
@@ -149,6 +154,12 @@ int main(int argc, char* argv[])
 			devs.get_ifs(dump);
 			return 0;
 		}
+
+		if (std::string(argv[1]) == "-v")
+		{
+			print_version();
+			return 0;
+		}
 	}
 
 	if (argc == 3) {
@@ -173,117 +184,124 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	if (argc == 5) {
-		if (std::string(argv[1]) == "-p" &&
-			std::string(argv[3]) == "-i")
-		{
-			offline_pcap_t pcap;
-			pcap.open(pcap, argv[2]);
-
-			pcap_mirror_replay_t capture;
-			capture.init(argv[4]);
-			pcap_mirror_replay_t::play_back(capture, pcap);
-			return 0;
-		}
-	}
-
-	if (argc == 7)
+	if (argc == 5 && 
+		std::string(argv[1]) == "-p" &&
+		std::string(argv[3]) == "-i")
 	{
-		if (std::string(argv[1]) == "-p" &&
-			std::string(argv[3]) == "-s" &&
-			std::string(argv[5]) == "-d")
-		{
-			pcap_stats(argv[2]);
-			replay_pcap_if(argv[2], argv[4], argv[6]);
-			return 0;
-		}
-		else if (std::string(argv[1]) == "-r" &&
-				 std::string(argv[3]) == "-s" &&
-				 std::string(argv[5]) == "-d")
-		{
-			offline_pcaps_action_replay_t stats;
-			if (!stats.init(argv[4], argv[6], false))
-			{
-				std::cout << "Failed configuring interfaces." << std::endl;
-				return 0;
-			}
+		offline_pcap_t pcap;
+		pcap.open(pcap, argv[2]);
 
-			std::cout << "Replaying folder: " << argv[2] << std::endl;
-			windows::fs::dir_files(argv[2], stats);
-			stats.dump_stats(std::cout);
-			return 0;
-		}
-		else if (std::string(argv[1]) == "-r" &&
-			std::string(argv[3]) == "-sip" &&
-			std::string(argv[5]) == "-dip")
-		{
-			offline_pcaps_action_replay_t stats;
-			if (!stats.init(argv[4], argv[6], true))
-			{
-				std::cout << "Failed configuring interfaces." << std::endl;
-				return 0;
-			}
-
-			std::cout << "Replaying folder: " << argv[2] << std::endl;
-			windows::fs::dir_files(argv[2], stats);
-			stats.dump_stats(std::cout);
-			return 0;
-		}
-		else if (std::string(argv[1]) == "-p" &&
-			std::string(argv[3]) == "-sip" &&
-			std::string(argv[5]) == "-dip")
-		{
-			pcap_stats(argv[2]);
-			replay_pcap_ip(argv[2], argv[4], argv[6]);
-			return 0;
-		}
+		pcap_mirror_replay_t capture;
+		capture.init(argv[4]);
+		pcap_mirror_replay_t::play_back(capture, pcap);
+		return 0;
 	}
 
-	if (argc == 11) {
-		if (std::string(argv[1]) == "-r" &&
-			std::string(argv[3]) == "-si" &&
-			std::string(argv[5]) == "-di" &&
-			std::string(argv[7]) == "-sip" &&
-			std::string(argv[9]) == "-dip")
+	if (argc == 7 && 
+		std::string(argv[1]) == "-p" &&
+		std::string(argv[3]) == "-s" &&
+		std::string(argv[5]) == "-d")
+	{
+		pcap_stats(argv[2]);
+		replay_pcap_if(argv[2], argv[4], argv[6]);
+		return 0;
+	}	
+
+	if (argc == 7 && 
+		std::string(argv[1]) == "-p"   &&
+		std::string(argv[3]) == "-sip" &&
+		std::string(argv[5]) == "-dip")
+	{
+		pcap_stats(argv[2]);
+		replay_pcap_ip(argv[2], argv[4], argv[6]);
+		return 0;
+	}
+
+	if ((argc == 7 || argc == 9)     &&
+		std::string(argv[1]) == "-r" &&
+		(std::string(argv[3]) == "-s" || std::string(argv[3]) == "-sip") &&
+		(std::string(argv[5]) == "-d" || std::string(argv[5]) == "-dip"))
+	{
+		int delay = 0;
+		if (argc == 9)
 		{
-			try
+			if(std::string(argv[7]) == "-de")
+				delay = atoi(argv[8]);
+			else
 			{
-				offline_pcaps_action_replay_t stats;
-				if (!stats.init(argv[4], argv[6], argv[8], argv[10])) {
-					std::cout << "Failed configuring interfaces or IP formats are incorrect." << std::endl;
+				help();
+				return 0;
+			}
+		}		
+		
+		offline_pcaps_action_replay_t stats;
+		if (!stats.init(argv[4], argv[6], false))
+		{
+			std::cout << "Failed configuring interfaces." << std::endl;
+			return 0;
+		}
+
+		std::cout << "Replaying folder: " << argv[2] << std::endl;
+		windows::fs::dir_files(argv[2], stats, delay);
+		stats.dump_stats(std::cout);
+		return 0;
+	}		
+	
+	if ((argc == 11 || argc == 13) &&
+		std::string(argv[1]) == "-r" &&
+		std::string(argv[3]) == "-si" &&
+		std::string(argv[5]) == "-di" &&
+		std::string(argv[7]) == "-sip" &&
+		std::string(argv[9]) == "-dip")
+	{
+		try
+		{
+			int delay = 0;
+			if (argc == 13)
+			{
+				if (std::string(argv[11]) == "-de")
+					delay = atoi(argv[12]);
+				else
+				{
+					help();
 					return 0;
 				}
+			}
 
-				std::cout << "Replaying folder: " << argv[2] << std::endl;
-				windows::fs::dir_files(argv[2], stats);
-				stats.dump_stats(std::cout);
+			offline_pcaps_action_replay_t stats;
+			if (!stats.init(argv[4], argv[6], argv[8], argv[10])) {
+				std::cout << "Failed configuring interfaces or IP formats are incorrect." << std::endl;
 				return 0;
 			}
-			catch (const std::exception& ex)
-			{
-				std::cout << "error replaying. error: " << ex.what() << std::endl;
-			}
-			catch (...)
-			{
-				std::cout << "error replaying. " << std::endl;
-			}
+
+			std::cout << "Replaying folder: " << argv[2] << std::endl;
+			windows::fs::dir_files(argv[2], stats, delay);
+			stats.dump_stats(std::cout);
+			return 0;
+		}
+		catch (const std::exception& ex)
+		{
+			std::cout << "error replaying. error: " << ex.what() << std::endl;
+		}
+		catch (...)
+		{
+			std::cout << "error replaying. " << std::endl;
 		}
 	}
 
-	//TrafficIQ fake options.
-	if (argc == 15) {
-		//-ia 2 -ea 3 -tfile pcap_file.pcap -iport * -eport 0 -retry 5 -path E:/HPD
-		if (std::string(argv[1]) == "-ia" &&
-			std::string(argv[3]) == "-ea" &&
-			std::string(argv[5]) == "-tfile" &&
-			std::string(argv[7]) == "-iport" &&
-			std::string(argv[9]) == "-eport" &&
-			std::string(argv[11]) == "-retry" &&
-			std::string(argv[13]) == "-path")
-		{
-			traffic_iq_replay(argv[2], argv[4], argv[6], argv[14]);
-			return 0;
-		}
+	//TQ fake options.
+	//-ia 2 -ea 3 -tfile pcap_file.pcap -iport * -eport 0 -retry 5 -path E:/HPD
+	if (argc == 15 &&
+		std::string(argv[1]) == "-ia" &&
+		std::string(argv[3]) == "-ea" &&
+		std::string(argv[5]) == "-tfile" &&
+		std::string(argv[7]) == "-iport" &&
+		std::string(argv[9]) == "-eport" &&
+		std::string(argv[11]) == "-retry" &&
+		std::string(argv[13]) == "-path")
+	{
+		traffic_iq_replay(argv[2], argv[4], argv[6], argv[14]);
+		return 0;
 	}
 
 	help();

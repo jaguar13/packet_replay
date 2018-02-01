@@ -18,6 +18,7 @@ namespace replay_gui {
 		bool started;
 		bool dump_log;
 		bool disable_frag;
+		int delay;
 
 		replay_data() 
 		{
@@ -26,6 +27,7 @@ namespace replay_gui {
 			started = false;
 			dump_log = false;
 			disable_frag = false;
+			delay = 0;
 		}
 
 		bool is_running() { return started; }

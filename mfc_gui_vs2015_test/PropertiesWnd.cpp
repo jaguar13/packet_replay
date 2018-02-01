@@ -67,7 +67,8 @@ CPropertiesWnd::CPropertiesWnd()
 		{ "","dst_ip"   , ST_STR ,"0.0.0.0" , "" },
 		{ "","cpu"      , ST_STR, "40"      , "" },
 		{ "","dump_log" , ST_STR, "False"   , "" },
-		{ "","frag_off" , ST_STR, "True"    , "" }
+		{ "","frag_off" , ST_STR, "True"    , "" },
+		{ "","delay"    , ST_STR, "0"       , "" }
 	};
 
 	uint32_t numSettings =
@@ -228,6 +229,7 @@ void CPropertiesWnd::InitPropList()
 	std::string cpu;
 	std::string dump_log;	
 	std::string frag_off;
+	std::string delay;
 
 	replay::pcap_devs_t devs;
 	devs.get_ifs(*(const_cast<CPropertiesWnd*>(this)));
@@ -239,6 +241,7 @@ void CPropertiesWnd::InitPropList()
 		pProgramSettings->getStrSetting("", "cpu", cpu);
 		pProgramSettings->getStrSetting("", "dump_log", dump_log);
 		pProgramSettings->getStrSetting("", "frag_off", frag_off);
+		pProgramSettings->getStrSetting("", "delay", delay);
 	}
 	else 
 	{
@@ -247,6 +250,7 @@ void CPropertiesWnd::InitPropList()
 		cpu = "40";
 		dump_log = "False";
 		frag_off = "False";
+		delay = "0";
 	}
 
 	if(src_ip == "0.0.0.0")
@@ -268,7 +272,8 @@ void CPropertiesWnd::InitPropList()
 		
 		pGroup1->AddSubItem(pSourceIf);
 		
-		pDestinationIf = new CMFCPropertyGridProperty(_T("Destination"), CString(dst_ip.c_str()), _T("Destination interface to replay packets"));
+		pDestinationIf = new CMFCPropertyGridProperty(_T("Destination"), CString(dst_ip.c_str()), 
+			_T("Destination interface to replay packets"));
 		pDestinationIf->AllowEdit(FALSE);
 		
 		for(size_t i = 0; i < m_if_names.size(); i++)
@@ -277,7 +282,9 @@ void CPropertiesWnd::InitPropList()
 		pGroup1->AddSubItem(pDestinationIf);		
 	}	
 
-	pCPUusage = new CMFCPropertyGridProperty(_T("CPU %"), CString(cpu.c_str()), _T("Control the CPU usage while repaying"));
+	pCPUusage = new CMFCPropertyGridProperty(_T("CPU %"), CString(cpu.c_str()), 
+		_T("Control the CPU usage while repaying"));
+
 	pCPUusage->AllowEdit(FALSE);
 
 	for (size_t i = 10; i <= 100; i += 10) {
@@ -296,13 +303,28 @@ void CPropertiesWnd::InitPropList()
 
 	pGroup1->AddSubItem(pDumpLog);
 
-	pDisableFrag = new CMFCPropertyGridProperty(_T("Disable Fragmentation"), CString(frag_off.c_str()), _T("When Fragementation is required then only replay the first fragment."));
+	pDisableFrag = new CMFCPropertyGridProperty(_T("Disable Fragmentation"), 
+		CString(frag_off.c_str()), _T("When Fragementation is required then only replay the first fragment."));
+
 	pDisableFrag->AllowEdit(FALSE);
 
 	pDisableFrag->AddOption(CString("True"));
 	pDisableFrag->AddOption(CString("False"));
 
 	pGroup1->AddSubItem(pDisableFrag);
+
+	pDelay = new CMFCPropertyGridProperty(_T("Delay"), CString(delay.c_str()),
+		_T("Delay between pcap files in milliseconds"));
+
+	pDelay->AllowEdit(TRUE);
+
+	for (size_t i = 10; i <= 1000; i += 10) {
+		CString percent;
+		percent.Format(_T("%d"), i);
+		pDelay->AddOption(percent);
+	}
+
+	pGroup1->AddSubItem(pDelay);
 
 	m_wndPropList.AddProperty(pGroup1);
 }
@@ -374,6 +396,7 @@ bool CPropertiesWnd::SaveSettings()
 	pProgramSettings->setStrSetting("", "cpu", GetCPU());
 	pProgramSettings->setStrSetting("", "dump_log", GetDumpLogEnable());
 	pProgramSettings->setStrSetting("", "frag_off", GetFragmentationDisable());
+	pProgramSettings->setStrSetting("", "delay", GetDelay());
 
 	return pProgramSettings->saveSettingsToFile(m_SettingFile, true) == SCL::SERC_SUCCESS;	 
 }
@@ -456,6 +479,20 @@ std::string CPropertiesWnd::GetFragmentationDisable()
 	CString val = pDisableFrag->GetValue();
 	std::string num = CT2A(val);
 	return num;
+}
+
+std::string CPropertiesWnd::GetDelay()
+{
+	CString val = pDelay->GetValue();
+	std::string num = CT2A(val);
+	return num;
+}
+
+int CPropertiesWnd::GetDelayValue()
+{
+	CString val = pDelay->GetValue();
+	std::string num = CT2A(val);
+	return  atoi(num.c_str());
 }
 
 int CPropertiesWnd::CPULimit()

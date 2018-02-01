@@ -338,7 +338,7 @@ namespace replay {
 		typedef std::set<uint64_t> mac_set_t;
 
 	public:
-		static void play_back(pcap_layer2_split_replay_t& pcaplive, const offline_pcap_t& pcap){pcap.get_packets(pcaplive);}
+		static void play_back(pcap_layer2_split_replay_t& pcaplive, const offline_pcap_t& pcap){ pcap.get_packets(pcaplive); }
 
 	public:
 		pcap_layer2_split_replay_t():

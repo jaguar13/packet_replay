@@ -1,4 +1,5 @@
 #pragma once
+#include <windows.h>
 #include <winsock2.h>
 #include <Iphlpapi.h>
 #include <vector>
@@ -61,10 +62,16 @@ namespace windows {
 		}
 	};
 
+	struct system 
+	{
+		static void sleep(int ms) { Sleep(ms); }
+	};
+
 	struct fs 
 	{
+		//delay: delay between files, in milliseconds
 		template <class Taction>
-		static bool dir_files(const char* path, Taction& action)
+		static bool dir_files(const char* path, Taction& action, int delay = 0)
 		{
 			WIN32_FIND_DATAA file;
 			HANDLE hFind = FindFirstFileA(path, &file);
@@ -74,6 +81,7 @@ namespace windows {
 
 			if (file.dwFileAttributes & FILE_ATTRIBUTE_ARCHIVE)
 			{
+				system::sleep(delay);
 				action.do_action(path);
 				FindClose(hFind);
 				return true;
@@ -93,6 +101,7 @@ namespace windows {
 						std::string full_path(path);
 						full_path.append("\\");
 						full_path.append(file.cFileName);
+						system::sleep(delay);
 						action.do_action(full_path.c_str());
 					}
 				}
@@ -103,7 +112,7 @@ namespace windows {
 		}
 
 		template <class Taction, class Tsignal>
-		static bool dir_files_recursive(const char* path, Taction& action, Tsignal* sig)
+		static bool dir_files_recursive(const char* path, Taction& action, Tsignal* sig, int delay = 0)
 		{
 			if (!sig->is_running())
 				return true;
@@ -114,12 +123,14 @@ namespace windows {
 			if (hFind == INVALID_HANDLE_VALUE)
 				return false;
 
-			if ((file.dwFileAttributes & FILE_ATTRIBUTE_ARCHIVE)
-				|| (file.dwFileAttributes & FILE_ATTRIBUTE_NORMAL))
+			//if ((file.dwFileAttributes & FILE_ATTRIBUTE_ARCHIVE)
+				  //|| (file.dwFileAttributes & FILE_ATTRIBUTE_NORMAL))
+			if (!(file.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
 			{
 				if (!sig->is_running())
 					return true;
 
+				system::sleep(delay);
 				action.do_action(path);
 				FindClose(hFind);
 				return true;
@@ -150,12 +161,14 @@ namespace windows {
 					full_path.append(file.cFileName);
 
 					//FILE_ATTRIBUTE_NORMAL: no attribute was set in the file
-					if ((file.dwFileAttributes & FILE_ATTRIBUTE_ARCHIVE)
-						|| (file.dwFileAttributes & FILE_ATTRIBUTE_NORMAL))
+					//if ((file.dwFileAttributes & FILE_ATTRIBUTE_ARCHIVE)
+						//|| (file.dwFileAttributes & FILE_ATTRIBUTE_NORMAL))
+					if (!(file.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
 					{
 						if (!sig->is_running())
 							return true;
 
+						system::sleep(delay);
 						action.do_action(full_path.c_str());
 					}
 										

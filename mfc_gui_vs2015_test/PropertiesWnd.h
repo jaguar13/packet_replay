@@ -43,6 +43,7 @@ private:
 	CMFCPropertyGridProperty* pCPUusage;
 	CMFCPropertyGridProperty* pDumpLog;
 	CMFCPropertyGridProperty* pDisableFrag;
+	CMFCPropertyGridProperty* pDelay;
 	SCL::settingsTV* pProgramSettings;
 	std::string m_SettingFile;
 
@@ -59,6 +60,8 @@ public:
 	std::string GetDumpLogEnable();
 	bool IsFragmentationDisable();
 	std::string GetFragmentationDisable();
+	std::string GetDelay();
+	int GetDelayValue();
 	bool SaveSettings();
 	bool LoadSettings();
 
