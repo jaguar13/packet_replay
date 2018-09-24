@@ -4,13 +4,8 @@
 
 #include "stdafx.h"
 #include "mfc_gui.h"
-
 #include "MainFrm.h"
 
-#include "traffic_replay.hpp"
-#include <cmd_actions/offline_pcaps_action_replay_folder_t.hpp>
-
-#include "replay_action.hpp"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW

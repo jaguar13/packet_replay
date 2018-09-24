@@ -1,7 +1,7 @@
 
 #pragma once
 
-#include "pcap.h"
+
 #include "settingsTV.h"
 
 class CPropertiesToolBar : public CMFCToolBar

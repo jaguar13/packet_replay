@@ -6,7 +6,6 @@
 #include "ChildView.h"
 #include "OutputWnd.h"
 #include "PropertiesWnd.h"
-#include "replay_action.hpp"
 
 class CMainFrame : public CFrameWndEx
 {

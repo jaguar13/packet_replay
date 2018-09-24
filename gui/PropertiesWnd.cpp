@@ -29,8 +29,6 @@ SOFTWARE.
 #include "MainFrm.h"
 #include "mfc_gui.h"
 
-#include "traffic_replay.hpp"
-
 struct pcap_devs_action_getif_t
 {
 	pcap_devs_action_getif_t(std::string& ip):m_ip(ip){}

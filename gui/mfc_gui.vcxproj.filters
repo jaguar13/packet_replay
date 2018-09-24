@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav</Extensions>
     </Filter>
+    <Filter Include="Source Files\ext">
+      <UniqueIdentifier>{9323fc97-320f-4147-8c66-3618b16c4c08}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ChildView.cpp">
@@ -41,6 +44,9 @@
     </ClCompile>
     <ClCompile Include="settingsTV.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\extlibs\libs\jody_hash\jody_hash64.c">
+      <Filter>Source Files\ext</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

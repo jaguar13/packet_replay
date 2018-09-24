@@ -28,6 +28,7 @@ SOFTWARE.
 #include <protocols/layer4/common.hpp>
 #include <endian/endianness.hpp>
 #include <crypto/checksum.hpp>
+#include <crypto/hash.hpp>
 
 namespace layer3 {
 	namespace ipv4 {
@@ -88,7 +89,7 @@ namespace layer3 {
 			void clear_more_fragments() { fragment_offset = fragment_offset & 0x1FFF; }
 
 			void set_fragment_offset(uint16_t offset) {	fragment_offset = (offset >> 3) | 0x2000; }
-
+			
 		public:
 			void fix_header_checksum()
 			{
@@ -123,6 +124,29 @@ namespace layer3 {
 			uint16_t get_abs_upper_offset() { return ip_header.get_length() + layer2::ethernet2_header_t::length; }	
 
 			uint16_t header_length() { return get_abs_upper_offset(); }
+
+			uint64_t src_host_hash()
+			{
+				uint64_t mac = eth_header.get_src();
+				uint64_t ip = ip_header.source_address;
+
+				uint64_t hash = 0;
+
+				crypto::hash::hash_t::quick_hash(&mac, sizeof(uint64_t), hash);
+				return crypto::hash::hash_t::quick_hash(&ip, sizeof(uint64_t), hash);
+			}
+
+			uint64_t dst_host_hash()
+			{
+				uint64_t mac = eth_header.get_dst();
+				uint64_t ip = ip_header.destination_address;
+
+				uint64_t hash = 0;
+
+				crypto::hash::hash_t::quick_hash(&mac, sizeof(uint64_t), hash);
+				return crypto::hash::hash_t::quick_hash(&ip, sizeof(uint64_t), hash);
+			}
+
 		};
 		#pragma pack(pop)
 		

@@ -99,7 +99,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>..\src;..\extlibs\libs\winpcap\4.1.2\include;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\src;..\extlibs\libs\winpcap\4.1.2\include;..\extlibs\libs\jody_hash</AdditionalIncludeDirectories>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -113,10 +113,15 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <TargetMachine>MachineX86</TargetMachine>
       <AdditionalLibraryDirectories>..\extlibs\libs\winpcap\4.1.2\lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>wpcap.lib;Packet.lib;Ws2_32.lib;Iphlpapi.lib</AdditionalDependencies>
+      <AdditionalDependencies>wpcap.lib;Packet.lib;Ws2_32.lib;Iphlpapi.lib;uafxcw.lib;LIBCMT.lib</AdditionalDependencies>
+      <IgnoreSpecificDefaultLibraries> uafxcw.lib;LIBCMT.lib</IgnoreSpecificDefaultLibraries>
+      <AdditionalOptions>/verbose:lib %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\extlibs\libs\jody_hash\jody_hash64.c">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="ChildView.cpp" />
     <ClCompile Include="CPULimiter.cpp" />
     <ClCompile Include="FileExplorer.cpp" />

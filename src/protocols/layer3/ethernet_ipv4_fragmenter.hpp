@@ -31,6 +31,7 @@ SOFTWARE.
 #include <protocols/layer4/udp.hpp>
 #include <endian/endianness.hpp>
 #include <crypto/checksum.hpp>
+#include <windows/windows.hpp>
 
 namespace layer3 {
 	namespace frag {
@@ -55,7 +56,11 @@ namespace layer3 {
 				return ethip->ip_header.packet_length > mtu_default;
 			}
 
-			static uint8_t do_fragment(pcap_t* dst_if, const u_char* data, uint32_t data_length, uint16_t offset = 0, bool first_packet_only = false)
+			static uint8_t do_fragment(pcap_t* dst_if, 
+				const u_char* data, 
+				uint32_t data_length, 
+				uint16_t offset = 0, 
+				bool first_packet_only = false)
 			{
 				layer3::ipv4::ethernet_ipv4_header_t* ethip = layer3::ipv4::ethernet_ipv4_header_t::get_header(data, offset);
 
@@ -118,7 +123,7 @@ namespace layer3 {
 							if (fragment_ethip->ip_header.upper_layer_type() == layer4::types_t::enums::tcp)
 								layer4::tcp::eth_ipv4_tcp_header_t::fix_checksum(frag_packet_data);
 							else if (fragment_ethip->ip_header.upper_layer_type() == layer4::types_t::enums::udp)
-								layer4::udp::udp_eth_ipv4_packet_t::fix_checksum(frag_packet_data);
+								layer4::udp::eth_ipv4_udp_packet_t::fix_checksum(frag_packet_data);
 						}				
 
 						ip_payload_length -= ip_payload_max;

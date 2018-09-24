@@ -44,6 +44,7 @@ TODO:
 #include <iostream>
 #include <string>
 #include <set>
+#include <map>
 
 #include "pcap.h"
 
@@ -355,11 +356,26 @@ namespace replay {
 		unsigned long long m_failed_ptk_count;
 	};	
 
+	struct host_t 
+	{
+		pcap_t* rif;
+		uint64_t mac;
+		uint32_t ip;
+	};
 
 	class pcap_layer2_split_replay_t
 	{
 	public:
+		const int on_close_packet_delay = 0;
+		const int on_packet_delay        = 0;
+		const int on_packet_synack_delay = 0;
+
+		const int on_n_packet_delay     = 50;
+		const int on_n_packet           = 10;
+
+	public:
 		typedef std::set<uint64_t> mac_set_t;
+		typedef std::map<uint64_t, host_t> host_map_t;
 
 	public:
 		static void play_back(pcap_layer2_split_replay_t& pcaplive, const offline_pcap_t& pcap){ pcap.get_packets(pcaplive); }
@@ -372,6 +388,7 @@ namespace replay {
 			m_pkt_replayed(0),
 			m_failed_ptk_count(0),
 		    m_l2_non_sp_ptk(0),
+			m_last_count(0),
 			m_disable_fragmentation(false){}
 
 		~pcap_layer2_split_replay_t()
@@ -391,7 +408,8 @@ namespace replay {
 					a sufficient number of packets arrive before seeing any packets, so you 
 					should use a non-zero timeout).
 		*/
-		bool init(const char* src_ifname, const char* dst_ifname, bool disable_frag = false, int snaplen = 9999, bool promisc = true, int to_ms = 5)
+		bool init(const char* src_ifname, const char* dst_ifname, bool disable_frag = false, 
+			int snaplen = 9999, bool promisc = true, int to_ms = 5)
 		{
 			m_src_if = 0;
 			m_dst_if = 0;
@@ -478,6 +496,7 @@ namespace replay {
 				return false;
 
 			m_pkt_count++;
+			windows::system::sleep(on_packet_delay);
 
 			if(data_link_type == layer2::types_t::ethernet_10mb)
 			{
@@ -503,65 +522,45 @@ namespace replay {
 				//pcaps can have Ethernet padding bytes at the end. pcap lib will fail to replay them if
 				//the total size is greater than the mtu. Here we are calculating the "util" pcayload to replay.
 				uint16_t full_packet_len = eth_ip_header->eth_header.length + eth_ip_header->ip_header.packet_length;
-
-				/*  
-					Layer 2 split algorithm.
-					1- if src is in src_list send packet to src interface.
-					2- if src is in dst_list send packet to dst interface.
-					3- if src is not in src_list and not is dst_list
-						- add to src_list and send packet to src interface
-					4- if dst is not broadcast and not dst_list add to dst_list.
-				*/
-				uint64_t src_original_mac = eth_header->get_src();
-				uint64_t dst_original_mac = eth_header->get_dst();
-
-				if(m_src_set.find(src_original_mac) != m_src_set.end())
+								
+				if (eth_ip_header->ip_header.upper_layer_type() == layer4::types_t::enums::tcp) 
 				{
-					eth_header->update_src(m_src_if_mac);
+					layer4::tcp::eth_ipv4_tcp_header_t hd;
+					if (!layer4::tcp::eth_ipv4_tcp_header_t::get_eth_ipv4_tcp_header(data, &hd)) {
+						m_failed_ptk_count++;
+						return false;
+					}			
 
-					if(!eth_header->dst_is_broadcast())
-						eth_header->update_dst(m_dst_if_mac);
+					if(hd.is_syn_ack())
+						windows::system::sleep(on_packet_synack_delay);
 					
-					//TODO: check if the IP is broadcast. Is really needed (MAC will be boadcast anyways)?
-					eth_ip_header->ip_header.change_ips(m_src_if_ip, m_dst_if_ip);
-					
-					if (layer3::frag::ethernet_ipv4_fragmenter::fragment(data, pk_header.caplen)) 
-					{
-						//Fragemented packet should keep the same TCP checksum as the original
-						//non fragmented packet.
-						fix_checksum(eth_ip_header, data);
-						uint8_t frags = layer3::frag::ethernet_ipv4_fragmenter::do_fragment(m_src_if, data, pk_header.caplen, 0, m_disable_fragmentation);
-						
-						if (frags == 0)
-							m_failed_ptk_count++;
-						else
-							m_pkt_replayed += frags;
+					uint64_t sh = hd.src_host_hash();
+					uint64_t dh = hd.dst_host_hash();
+
+					if (m_host_tcp_map.find(sh) == m_host_tcp_map.end()) {
+						m_host_tcp_map[sh].rif = m_src_if;
+						m_host_tcp_map[sh].mac = m_src_if_mac;
+						m_host_tcp_map[sh].ip  = m_src_if_ip;
 					}
-					else {
 
-						fix_checksum(eth_ip_header, data);
-						if (pcap_sendpacket(m_src_if, data, full_packet_len) < 0)
-							m_failed_ptk_count++;
-						else
-							m_pkt_replayed++;
+					if (m_host_tcp_map.find(dh) == m_host_tcp_map.end()) {
+						m_host_tcp_map[dh].rif = m_dst_if;
+						m_host_tcp_map[dh].mac = m_dst_if_mac;
+						m_host_tcp_map[dh].ip = m_dst_if_ip;
 					}
-				}
-				else if(m_dst_set.find(src_original_mac) != m_dst_set.end())
-				{
-					eth_header->update_src(m_dst_if_mac);
 
-					if(!eth_header->dst_is_broadcast())
-						eth_header->update_dst(m_src_if_mac);
+					eth_header->update_src(m_host_tcp_map[sh].mac);
+					eth_header->update_dst(m_host_tcp_map[dh].mac);
 
-					//TODO: check if the IP is broadcast. Is really needed (MAC will be boadcast anyways)?
-					eth_ip_header->ip_header.change_ips(m_dst_if_ip, m_src_if_ip);
+					eth_ip_header->ip_header.change_ips(m_host_tcp_map[sh].ip, m_host_tcp_map[dh].ip);
 
 					if (layer3::frag::ethernet_ipv4_fragmenter::fragment(data, pk_header.caplen))
 					{
 						//Fragemented packet should keep the same TCP checksum as the original
 						//non fragmented packet.
 						fix_checksum(eth_ip_header, data);
-						uint8_t frags = layer3::frag::ethernet_ipv4_fragmenter::do_fragment(m_src_if, data, pk_header.caplen, 0, m_disable_fragmentation);
+						uint8_t frags = layer3::frag::ethernet_ipv4_fragmenter::do_fragment(m_host_tcp_map[sh].rif, 
+							data, pk_header.caplen, 0, m_disable_fragmentation);
 
 						if (frags == 0)
 							m_failed_ptk_count++;
@@ -571,29 +570,44 @@ namespace replay {
 					else {
 
 						fix_checksum(eth_ip_header, data);
-						if (pcap_sendpacket(m_dst_if, data, full_packet_len) < 0)
+						if (pcap_sendpacket(m_host_tcp_map[sh].rif, data, full_packet_len) < 0)
 							m_failed_ptk_count++;
 						else
 							m_pkt_replayed++;
 					}
 				}
-				else
+				else if (eth_ip_header->ip_header.upper_layer_type() == layer4::types_t::enums::udp)
 				{
-					m_src_set.insert(src_original_mac);					
-					eth_header->update_src(m_src_if_mac);
-					
-					if(!eth_header->dst_is_broadcast())
-						eth_header->update_dst(m_dst_if_mac);
+					layer4::udp::eth_ipv4_udp_packet_t hd;
+					if (!layer4::udp::eth_ipv4_udp_packet_t::parse(data, &hd)){
+						m_failed_ptk_count++;
+						return false;
+					}
 
-					//TODO: check if the IP is broadcast. Is really needed (MAC will be boadcast anyways)?
-					eth_ip_header->ip_header.change_ips(m_src_if_ip, m_dst_if_ip);
-					
-					if (layer3::frag::ethernet_ipv4_fragmenter::fragment(data, pk_header.caplen)) 
+					uint64_t sh = hd.src_host_hash();
+					uint64_t dh = hd.dst_host_hash();
+
+					if (m_host_udp_map.find(sh) == m_host_udp_map.end()) {
+						m_host_udp_map[sh].rif = m_src_if;
+						m_host_udp_map[sh].mac = m_src_if_mac;
+						m_host_udp_map[sh].ip = m_src_if_ip;
+					}
+
+					if (m_host_udp_map.find(dh) == m_host_udp_map.end()) {
+						m_host_udp_map[dh].rif = m_dst_if;
+						m_host_udp_map[dh].mac = m_dst_if_mac;
+						m_host_udp_map[dh].ip = m_dst_if_ip;
+					}
+
+					eth_ip_header->ip_header.change_ips(m_host_udp_map[sh].ip, m_host_udp_map[dh].ip);
+
+					if (layer3::frag::ethernet_ipv4_fragmenter::fragment(data, pk_header.caplen))
 					{
 						//Fragemented packet should keep the same TCP checksum as the original
 						//non fragmented packet.
 						fix_checksum(eth_ip_header, data);
-						uint8_t frags = layer3::frag::ethernet_ipv4_fragmenter::do_fragment(m_src_if, data, pk_header.caplen, 0, m_disable_fragmentation);
+						uint8_t frags = layer3::frag::ethernet_ipv4_fragmenter::do_fragment(m_host_udp_map[sh].rif, 
+							data, pk_header.caplen, 0, m_disable_fragmentation);
 
 						if (frags == 0)
 							m_failed_ptk_count++;
@@ -603,15 +617,53 @@ namespace replay {
 					else {
 
 						fix_checksum(eth_ip_header, data);
-						if (pcap_sendpacket(m_src_if, data, full_packet_len) < 0)
+						if (pcap_sendpacket(m_host_udp_map[sh].rif, data, full_packet_len) < 0)
 							m_failed_ptk_count++;
 						else
 							m_pkt_replayed++;
 					}
 				}
+				else //non udp or tcp
+				{
+					uint64_t sh = eth_ip_header->src_host_hash();
+					uint64_t dh = eth_ip_header->dst_host_hash();
 
-				if(!eth_header->dst_is_broadcast() && (m_dst_set.find(dst_original_mac) == m_dst_set.end()))
-					m_dst_set.insert(dst_original_mac);				
+					if (m_host_other_map.find(sh) == m_host_other_map.end()) {
+						m_host_other_map[sh].rif = m_src_if;
+						m_host_other_map[sh].mac = m_src_if_mac;
+						m_host_other_map[sh].ip = m_src_if_ip;
+					}
+
+					if (m_host_other_map.find(dh) == m_host_other_map.end()) {
+						m_host_other_map[dh].rif = m_dst_if;
+						m_host_other_map[dh].mac = m_dst_if_mac;
+						m_host_other_map[dh].ip = m_dst_if_ip;
+					}
+
+					eth_ip_header->ip_header.change_ips(m_host_other_map[sh].ip, m_host_other_map[dh].ip);
+
+					if (layer3::frag::ethernet_ipv4_fragmenter::fragment(data, pk_header.caplen))
+					{
+						//Fragemented packet should keep the same TCP checksum as the original
+						//non fragmented packet.
+						fix_checksum(eth_ip_header, data);
+						uint8_t frags = layer3::frag::ethernet_ipv4_fragmenter::do_fragment(m_host_other_map[sh].rif,
+							data, pk_header.caplen, 0, m_disable_fragmentation);
+
+						if (frags == 0)
+							m_failed_ptk_count++;
+						else
+							m_pkt_replayed += frags;
+					}
+					else {
+
+						fix_checksum(eth_ip_header, data);
+						if (pcap_sendpacket(m_host_other_map[sh].rif, data, full_packet_len) < 0)
+							m_failed_ptk_count++;
+						else
+							m_pkt_replayed++;
+					}
+				}
 			}
 			else
 				m_l2_non_sp_ptk++;
@@ -625,7 +677,7 @@ namespace replay {
 				return layer4::tcp::eth_ipv4_tcp_header_t::fix_checksum(data);
 			
 			if (ip->ip_header.upper_layer_type() == layer4::types_t::enums::udp)
-				return layer4::udp::udp_eth_ipv4_packet_t::fix_checksum(data);
+				return layer4::udp::eth_ipv4_udp_packet_t::fix_checksum(data);
 
 			return false;
 		}
@@ -676,6 +728,10 @@ namespace replay {
 		mac_set_t m_src_set;
 		mac_set_t m_dst_set;
 
+		host_map_t m_host_tcp_map;
+		host_map_t m_host_udp_map;
+		host_map_t m_host_other_map;
+
 		//when fragementation is needed 
 		//olly the first packet is sent.
 		bool m_disable_fragmentation; 
@@ -685,6 +741,7 @@ namespace replay {
 		uint64_t m_failed_ptk_count;
 		uint64_t m_l2_non_sp_ptk;
 
+		uint64_t m_last_count;
 
 	};
 }

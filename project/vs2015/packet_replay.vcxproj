@@ -45,7 +45,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>..\..\extlibs\libs\winpcap\4.1.2\include;..\..\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\extlibs\libs\jody_hash;..\..\extlibs\libs\winpcap\4.1.2\include;..\..\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
@@ -63,7 +63,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>..\..\extlibs\libs\winpcap\4.1.2\include;..\..\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\extlibs\libs\jody_hash;..\..\extlibs\libs\winpcap\4.1.2\include;..\..\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
@@ -77,6 +77,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\extlibs\libs\jody_hash\jody_hash64.c" />
     <ClCompile Include="..\..\src\basic_dump.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -85,6 +86,7 @@
     <ClInclude Include="..\..\src\cmd_actions\pcap_devs_action_getif_by_number_t.hpp" />
     <ClInclude Include="..\..\src\cmd_actions\pcap_devs_action_getif_t.hpp" />
     <ClInclude Include="..\..\src\crypto\checksum.hpp" />
+    <ClInclude Include="..\..\src\crypto\hash.hpp" />
     <ClInclude Include="..\..\src\endian\endianness.hpp" />
     <ClInclude Include="..\..\src\protocols\layer2\common.hpp" />
     <ClInclude Include="..\..\src\protocols\layer2\ethernet2.hpp" />

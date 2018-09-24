@@ -30,7 +30,7 @@ SOFTWARE.
 
 using namespace replay;
 
-#define VERSION "1.2.6.0"
+#define VERSION "1.2.7.0"
 void print_version() { std::cout << "pcap replay tool: " << VERSION << std::endl; }
 
 void help()
